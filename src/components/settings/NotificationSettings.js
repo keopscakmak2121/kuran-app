@@ -1,4 +1,5 @@
-// src/components/settings/NotificationSettings.js - SES DİNLEME ÖZELLİĞİ EKLENDI
+// src/components/settings/NotificationSettings.js - SES DİNLEME ÖZELLİĞİ EKLENDI VE VAKİT AYARI EKLENDI
+
 import React, { useState, useRef } from 'react';
 import { requestNotificationPermission, SOUND_OPTIONS } from '../../utils/notificationStorage';
 import { sendTestNotification } from '../../utils/notificationService';
@@ -642,55 +643,104 @@ const NotificationSettings = ({
               <div 
                 key={prayer}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
                   padding: '12px 0',
                   borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '20px' }}>{prayerNames[prayer].icon}</span>
-                  <span style={{ color: text, fontSize: '14px' }}>
-                    {prayerNames[prayer].name}
-                  </span>
-                </div>
-                
-                <label style={{ 
-                  position: 'relative', 
-                  display: 'inline-block', 
-                  width: '50px', 
-                  height: '28px' 
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={notificationSettings.prayerNotifications[prayer]?.enabled}
-                    onChange={(e) => onPrayerNotificationChange(prayer, 'enabled', e.target.checked)}
-                    style={{ opacity: 0, width: 0, height: 0 }}
-                  />
-                  <span style={{
-                    position: 'absolute',
-                    cursor: 'pointer',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: notificationSettings.prayerNotifications[prayer]?.enabled ? '#059669' : '#d1d5db',
-                    transition: '0.4s',
-                    borderRadius: '28px'
+                {/* AÇMA/KAPAMA ANAHTARINI ve VAKİT ADINI İÇEREN KISIM */}
+                <div 
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '20px' }}>{prayerNames[prayer].icon}</span>
+                    <span style={{ color: text, fontSize: '14px' }}>
+                      {prayerNames[prayer].name}
+                    </span>
+                  </div>
+                  
+                  <label style={{ 
+                    position: 'relative', 
+                    display: 'inline-block', 
+                    width: '50px', 
+                    height: '28px' 
                   }}>
+                    <input
+                      type="checkbox"
+                      checked={notificationSettings.prayerNotifications[prayer]?.enabled}
+                      onChange={(e) => onPrayerNotificationChange(prayer, 'enabled', e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
                     <span style={{
                       position: 'absolute',
-                      height: '22px',
-                      width: '22px',
-                      left: notificationSettings.prayerNotifications[prayer]?.enabled ? '25px' : '3px',
-                      bottom: '3px',
-                      backgroundColor: 'white',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: notificationSettings.prayerNotifications[prayer]?.enabled ? '#059669' : '#d1d5db',
                       transition: '0.4s',
-                      borderRadius: '50%'
-                    }}></span>
-                  </span>
-                </label>
+                      borderRadius: '28px'
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        height: '22px',
+                        width: '22px',
+                        left: notificationSettings.prayerNotifications[prayer]?.enabled ? '25px' : '3px',
+                        bottom: '3px',
+                        backgroundColor: 'white',
+                        transition: '0.4s',
+                        borderRadius: '50%'
+                      }}></span>
+                    </span>
+                  </label>
+                </div>
+                
+                {/* 🕌 VAKİTTEN ÖNCE/SONRA AYARI - YENİ EKLENEN KOD */}
+                {/* Bu ayar, o namaz vaktinin bildirimi açıksa görünür. */}
+                {notificationSettings.prayerNotifications[prayer]?.enabled && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    marginTop: '15px', // Üstteki anahtarla arasında boşluk bırak
+                    padding: '10px',
+                    backgroundColor: darkMode ? '#1f2937' : '#e5e7eb',
+                    borderRadius: '6px'
+                  }}>
+                    <label style={{ color: text, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                      Vakitten 
+                    </label>
+                    
+                    <select
+                      // adjustment değerini okur veya yoksa 0 (tam vakit) olarak ayarlanır
+                      value={notificationSettings.prayerNotifications[prayer]?.adjustment || 0} 
+                      onChange={(e) => onPrayerNotificationChange(prayer, 'adjustment', parseInt(e.target.value))}
+                      style={{
+                        padding: '6px',
+                        borderRadius: '4px',
+                        border: '1px solid #9ca3af',
+                        backgroundColor: darkMode ? '#374151' : 'white',
+                        color: text,
+                        fontSize: '12px',
+                        flex: 1
+                      }}
+                    >
+                      <option value={-10}>10 dk ÖNCE</option>
+                      <option value={-5}>5 dk ÖNCE</option>
+                      <option value={0}>TAM VAKTİNDE</option>
+                      <option value={5}>5 dk SONRA</option>
+                      <option value={10}>10 dk SONRA</option>
+                    </select>
+                    
+                    <label style={{ color: text, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                      Ayarlı
+                    </label>
+                  </div>
+                )}
               </div>
             ))}
           </div>
