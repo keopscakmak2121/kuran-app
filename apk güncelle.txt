@@ -1,0 +1,38 @@
+cmd
+
+cd "C:\Users\osman\Desktop\kuran-app"
+
+
+
+
+
+npx cap clean
+npm run build
+npx cap copy
+npx cap sync android
+cd android
+gradlew clean
+gradlew assembleDebug
+
+
+
+olmazsa bunu çalıştır poweshellde
+
+cd "C:\Users\osman\Desktop\kuran-app"
+npm run rebuild
+cd android
+./gradlew clean
+./gradlew assembleDebug
+
+
+
+
+
+yada cmd den
+
+
+
+cd C:\Users\osman\Desktop\kuran-app
+npm run build
+npx cap sync android
+npx cap open android
