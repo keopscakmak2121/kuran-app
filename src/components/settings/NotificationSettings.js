@@ -1,6 +1,6 @@
-// src/components/settings/NotificationSettings.js - SES DİNLEME ÖZELLİĞİ EKLENDI VE VAKİT AYARI EKLENDI
+// src/components/settings/NotificationSettings.js - SES ÖNİZLEME DÜZELTİLDİ
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { requestNotificationPermission, SOUND_OPTIONS } from '../../utils/notificationStorage';
 import { sendTestNotification } from '../../utils/notificationService';
 
@@ -19,61 +19,116 @@ const NotificationSettings = ({
   // 🔊 Ses önizleme için state ve ref
   const [playingSound, setPlayingSound] = useState(null);
   const audioRef = useRef(null);
+  const intervalRef = useRef(null);
 
-  // 🔊 Ses önizleme fonksiyonu
-  const handlePreviewSound = (soundFile, soundId) => {
-    try {
-      // Eğer aynı ses çalıyorsa durdur
-      if (playingSound === soundId && audioRef.current) {
+  // Cleanup: Component unmount olduğunda sesi durdur
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        setPlayingSound(null);
-        return;
+        audioRef.current.src = '';
+        audioRef.current = null;
       }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
-      // Önceki sesi durdur
+  // 🔊 Ses önizleme fonksiyonu - TAMAMEN YENİDEN YAZILDI
+  const handlePreviewSound = (soundFile, soundId) => {
+    console.log('🔊 handlePreviewSound çağrıldı:', soundId, 'Şu an çalan:', playingSound);
+
+    // Eğer aynı ses çalıyorsa DURDUR
+    if (playingSound === soundId) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+        audioRef.current.src = '';
+        audioRef.current.load();
+        audioRef.current = null;
       }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setPlayingSound(null);
+      console.log('🔇 Ses durduruldu:', soundId);
+      return;
+    }
 
-      // Yeni ses oluştur ve çal
-      const audio = new Audio(`/sounds/${soundFile}`);
-      audioRef.current = audio;
-      setPlayingSound(soundId);
+    // Önceki sesi tamamen durdur
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
+      audioRef.current.load();
+      audioRef.current = null;
+    }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-      // 15 saniye sonra otomatik durdur
-      audio.currentTime = 0;
-      const maxDuration = 15; // 15 saniye önizleme
+    // STATE'İ HEMEN GÜNCELLE
+    setPlayingSound(soundId);
+    console.log('▶️ playingSound state güncellendi:', soundId);
 
-      audio.play().catch(err => {
-        console.error('Ses çalma hatası:', err);
-        alert('⚠️ Ses dosyası yüklenemedi. Dosyanın /public/sounds/ klasöründe olduğundan emin olun.');
+    // Yeni ses oluştur
+    const audio = new Audio(`/sounds/${soundFile}`);
+    audioRef.current = audio;
+
+    console.log('🎵 Ses dosyası yüklendi:', soundFile);
+
+    // 15 saniye sınırı
+    const maxDuration = 15;
+
+    audio.play()
+      .then(() => {
+        console.log('✅ Ses çalmaya başladı');
+      })
+      .catch(err => {
+        console.error('❌ Ses çalma hatası:', err);
         setPlayingSound(null);
+        audioRef.current = null;
       });
 
-      // Ses bittiğinde veya 15 saniye dolduğunda durdur
-      audio.ontimeupdate = () => {
-        if (audio.currentTime >= maxDuration) {
-          audio.pause();
-          audio.currentTime = 0;
-          setPlayingSound(null);
-        }
-      };
-
-      audio.onended = () => {
+    // Her 100ms kontrol et
+    intervalRef.current = setInterval(() => {
+      if (audio.currentTime >= maxDuration) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+        audio.load();
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
         setPlayingSound(null);
-      };
+        audioRef.current = null;
+        console.log('⏱️ 15 saniye doldu');
+      }
+    }, 100);
 
-      audio.onerror = () => {
-        console.error('Ses yükleme hatası');
-        setPlayingSound(null);
-      };
-
-    } catch (error) {
-      console.error('Ses önizleme hatası:', error);
+    // Ses bittiğinde
+    audio.onended = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       setPlayingSound(null);
-    }
+      audioRef.current = null;
+      console.log('✅ Ses tamamlandı');
+    };
+
+    // Hata
+    audio.onerror = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      console.error('❌ Ses yükleme hatası:', soundFile);
+      setPlayingSound(null);
+      audioRef.current = null;
+    };
   };
 
   const handleRequestPermission = async () => {
@@ -108,7 +163,6 @@ const NotificationSettings = ({
 
   const handleTestNotification = () => {
     sendTestNotification();
-    alert('🔔 Test bildirimi 2 saniye içinde gelecek!\n\nSeçili ses ve titreşim ayarlarınızla test ediliyor.');
   };
 
   const prayerNames = {
@@ -206,7 +260,7 @@ const NotificationSettings = ({
         </div>
       )}
 
-      {/* ANA BİLDİRİM AÇMA/KAPAMA */}
+      {/* ANA BİLDİRİM AÇ/KAPAT */}
       <div style={{
         padding: '20px',
         backgroundColor: cardBg,
@@ -372,14 +426,13 @@ const NotificationSettings = ({
                   </select>
                 </div>
 
-                {/* EZAN SESİ SEÇİMİ - DİNLE BUTONU EKLENDI */}
+                {/* EZAN SESİ SEÇİMİ */}
                 {notificationSettings.soundType === 'adhan' && (
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ fontSize: '14px', color: text, marginBottom: '8px', display: 'block' }}>
                       Ezan Sesi Seçin
                     </label>
                     
-                    {/* Her ezan için radio button + dinle butonu */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {SOUND_OPTIONS.adhan.map(sound => (
                         <div 
@@ -418,10 +471,12 @@ const NotificationSettings = ({
                             </span>
                           </label>
                           
-                          {/* DİNLE BUTONU */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              // Önce sesi seç
+                              onNotificationChange('selectedAdhan', sound.id);
+                              // Sonra çal (timeout kaldırıldı)
                               handlePreviewSound(sound.file, sound.id);
                             }}
                             style={{
@@ -446,7 +501,7 @@ const NotificationSettings = ({
                   </div>
                 )}
 
-                {/* BİLDİRİM SESİ SEÇİMİ - DİNLE BUTONU EKLENDI */}
+                {/* BİLDİRİM SESİ SEÇİMİ */}
                 {notificationSettings.soundType === 'notification' && (
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ fontSize: '14px', color: text, marginBottom: '8px', display: 'block' }}>
@@ -491,11 +546,13 @@ const NotificationSettings = ({
                             </span>
                           </label>
                           
-                          {/* DİNLE BUTONU - Varsayılan ses için devre dışı */}
                           {sound.id !== 'default' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                // Önce sesi seç
+                                onNotificationChange('selectedNotification', sound.id);
+                                // Sonra çal (timeout kaldırıldı)
                                 handlePreviewSound(sound.file, sound.id);
                               }}
                               style={{
@@ -524,7 +581,7 @@ const NotificationSettings = ({
             )}
           </div>
 
-          {/* TİTREŞİM AYARLARI */}
+          {/* TİTREŞİM */}
           <div style={{
             padding: '20px',
             backgroundColor: cardBg,
@@ -624,7 +681,7 @@ const NotificationSettings = ({
             </div>
           </div>
 
-          {/* NAMAZ VAKİTLERİ AYARLARI */}
+          {/* NAMAZ VAKİTLERİ */}
           <div style={{
             padding: '20px',
             backgroundColor: cardBg,
@@ -647,7 +704,6 @@ const NotificationSettings = ({
                   borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`
                 }}
               >
-                {/* AÇMA/KAPAMA ANAHTARINI ve VAKİT ADINI İÇEREN KISIM */}
                 <div 
                   style={{
                     display: 'flex',
@@ -699,14 +755,12 @@ const NotificationSettings = ({
                   </label>
                 </div>
                 
-                {/* 🕌 VAKİTTEN ÖNCE/SONRA AYARI - YENİ EKLENEN KOD */}
-                {/* Bu ayar, o namaz vaktinin bildirimi açıksa görünür. */}
                 {notificationSettings.prayerNotifications[prayer]?.enabled && (
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    marginTop: '15px', // Üstteki anahtarla arasında boşluk bırak
+                    marginTop: '15px',
                     padding: '10px',
                     backgroundColor: darkMode ? '#1f2937' : '#e5e7eb',
                     borderRadius: '6px'
@@ -716,7 +770,6 @@ const NotificationSettings = ({
                     </label>
                     
                     <select
-                      // adjustment değerini okur veya yoksa 0 (tam vakit) olarak ayarlanır
                       value={notificationSettings.prayerNotifications[prayer]?.adjustment || 0} 
                       onChange={(e) => onPrayerNotificationChange(prayer, 'adjustment', parseInt(e.target.value))}
                       style={{

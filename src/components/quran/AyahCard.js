@@ -1,4 +1,4 @@
-// src/components/AyahCard.js - OK İŞARETİ KARTIN SOL BOŞLUĞUNA HİZALANDI
+// src/components/quran/AyahCard.js
 import React from 'react';
 import { getArabicFontFamily } from '../../utils/settingsStorage';
 import AyahControls from './AyahControls';
@@ -14,44 +14,68 @@ const AyahCard = ({
   copiedAyah,
   isBookmarked,
   note,
+  highlightWord = '',
   onPlay,
   onCopy,
   onToggleBookmark,
-  onOpenNote,
-  onOpenTafsir
+  onOpenNote
 }) => {
   const text = darkMode ? '#f3f4f6' : '#1f2937';
   const isActive = currentAyah === ayah.number;
-  
-  // Ok işareti için soldan boşluk bırakıyoruz
-  // Ok işaretini kartın normal 12px padding'inin içine, içeriği itmeyecek şekilde yerleştirmek için 30px yaptık
   const cardPaddingLeft = isActive ? '30px' : '12px';
 
+  // Kelime vurgulama fonksiyonu
+  const highlightText = (text, query) => {
+    if (!query || !query.trim()) return text;
+
+    // HTML etiketlerini korumak için özel işlem (tajweed için)
+    const hasHTML = /<[^>]*>/g.test(text);
+    
+    if (hasHTML) {
+      // HTML varsa, sadece text node'ları vurgula
+      return text;
+    }
+
+    // Normal metin için vurgulama
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        `<mark style="background-color: #fbbf24; color: #000; font-weight: bold; padding: 2px 4px; border-radius: 3px;">${part}</mark>`
+      ) : (
+        part
+      )
+    ).join('');
+  };
+
+  // Türkçe metin için vurgulama
+  const getTurkishWithHighlight = () => {
+    if (!highlightWord) return ayah.turkish;
+    return highlightText(ayah.turkish, highlightWord);
+  };
+
   return (
-    // Ana Kapsayıcı Kart - position: relative ok işaretini konumlandırmak için kritik
     <div
       style={{
-        position: 'relative', // Ok işareti için
+        position: 'relative',
         padding: '12px',
-        paddingLeft: cardPaddingLeft, // Ok işareti için ek boşluk
+        paddingLeft: cardPaddingLeft,
         backgroundColor: (darkMode ? '#4b5563' : '#f9fafb'),
         borderRadius: '10px',
-        // Okunan ayet için daha belirgin bir kenarlık
         border: isActive ? '1px solid #059669' : '1px solid transparent', 
         boxShadow: 'none',
-        transition: 'all 0.3s, padding-left 0.3s' // padding-left animasyonu ekledik
+        transition: 'all 0.3s, padding-left 0.3s'
       }}
     >
       
-      {/* 🟢 OK İŞARETİ (INDICATOR) - KARTIN SOL İÇ BOŞLUĞUNA HİZALANDI */}
       {isActive && (
         <div 
           style={{
             position: 'absolute',
-            left: '3px', // 12px'lik orijinal padding alanının sol kenarına yakın
+            left: '3px',
             top: '50%',
             transform: 'translateY(-50%)',
-            color: '#059669', // Yeşil renk
+            color: '#059669',
             fontSize: '24px', 
             lineHeight: '1',
             fontWeight: 'bold',
@@ -61,18 +85,15 @@ const AyahCard = ({
           ▶
         </div>
       )}
-      {/* 🟢 OK İŞARETİ BİTİŞ */}
 
-      {/* Arapça Metin Div'i */}
+      {/* Arapça Metin */}
       <div style={{
         padding: '8px', 
         borderRadius: '6px',
-        // Okunurken hafif bir arka plan vurgusu
         backgroundColor: isActive 
           ? (darkMode ? '#3e4a57' : '#e0f2f1') 
           : 'transparent',
         transition: 'background-color 0.3s',
-        
         fontSize: fontSize + 4,
         textAlign: 'right',
         lineHeight: '2',
@@ -92,15 +113,18 @@ const AyahCard = ({
         <span> ﴿{ayah.number}﴾</span>
       </div>
 
-      {/* Türkçe Çeviri, Notlar ve Kontroller aynı kalır. */}
-      <div style={{
-        fontSize: fontSize - 2,
-        lineHeight: '1.8',
-        color: text,
-        marginBottom: '10px'
-      }}>
-        {ayah.turkish}
-      </div>
+      {/* Türkçe Çeviri - Vurgulamalı */}
+      <div 
+        style={{
+          fontSize: fontSize - 2,
+          lineHeight: '1.8',
+          color: text,
+          marginBottom: '10px'
+        }}
+        dangerouslySetInnerHTML={{ 
+          __html: getTurkishWithHighlight()
+        }}
+      />
 
       {note && (
         <div style={{
@@ -139,7 +163,6 @@ const AyahCard = ({
         onCopy={onCopy}
         onToggleBookmark={onToggleBookmark}
         onOpenNote={onOpenNote}
-        onOpenTafsir={onOpenTafsir}
       />
     </div>
   );

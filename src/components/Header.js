@@ -1,6 +1,7 @@
-// src/components/Header.js
-import React, { useState } from 'react';
 
+import React, { useState } from 'react';
+// BUILD VERSION: 0.2.0 - UPDATED $(date)
+console.log('Header Version 0.2.0 loaded!');
 const Header = ({ onNavigate, darkMode, toggleDarkMode }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -37,10 +38,6 @@ const Header = ({ onNavigate, darkMode, toggleDarkMode }) => {
           >
             ☰
           </button>
-          
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
-            📖 Kuran-ı Kerim
-          </h1>
         </div>
 
         {/* Sağ Taraf - Ana Sayfa ve Karanlık Mod */}

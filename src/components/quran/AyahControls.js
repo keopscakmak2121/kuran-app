@@ -11,8 +11,7 @@ const AyahControls = ({
   onPlay,
   onCopy,
   onToggleBookmark,
-  onOpenNote,
-  onOpenTafsir
+  onOpenNote
 }) => {
   const text = darkMode ? '#f3f4f6' : '#1f2937';
 
@@ -83,22 +82,6 @@ const AyahControls = ({
         }}
       >
         {hasNote ? '📝 Not Düzenle' : '📝 Not Ekle'}
-      </button>
-
-      {/* Tefsir Butonu */}
-      <button
-        onClick={() => onOpenTafsir(ayah)}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: '#8b5cf6',
-          color: 'white',
-          border: 'none',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '14px'
-        }}
-      >
-        📖 Tefsir
       </button>
     </div>
   );

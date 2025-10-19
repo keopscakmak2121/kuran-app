@@ -6,7 +6,7 @@ const Search = ({ darkMode, onAyahClick }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [searchType, setSearchType] = useState('turkish'); // turkish veya arabic
+  const [searchType, setSearchType] = useState('turkish');
 
   const cardBg = darkMode ? '#374151' : 'white';
   const text = darkMode ? '#f3f4f6' : '#1f2937';
@@ -24,10 +24,8 @@ const Search = ({ darkMode, onAyahClick }) => {
     try {
       const results = [];
 
-      // Tüm sureleri tara
       for (const surah of allSurahs) {
         try {
-          // API'den sureyi çek
           const response = await fetch(
             `https://api.alquran.cloud/v1/surah/${surah.number}/editions/quran-simple,tr.diyanet`
           );
@@ -37,7 +35,6 @@ const Search = ({ darkMode, onAyahClick }) => {
             const arabic = data.data[0].ayahs;
             const turkish = data.data[1].ayahs;
 
-            // Her ayeti kontrol et
             arabic.forEach((ayah, index) => {
               const searchLower = searchQuery.toLowerCase();
               const turkishText = turkish[index].text.toLowerCase();
@@ -108,7 +105,6 @@ const Search = ({ darkMode, onAyahClick }) => {
       padding: '20px',
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
     }}>
-      {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <h2 style={{ fontSize: '24px', margin: '0 0 10px 0', color: text }}>
           🔍 Ayet Arama
@@ -118,7 +114,6 @@ const Search = ({ darkMode, onAyahClick }) => {
         </p>
       </div>
 
-      {/* Arama Türü Seçimi */}
       <div style={{ 
         display: 'flex', 
         gap: '10px', 
@@ -157,11 +152,11 @@ const Search = ({ darkMode, onAyahClick }) => {
         </button>
       </div>
 
-      {/* Arama Kutusu */}
       <div style={{ 
         display: 'flex', 
         gap: '10px', 
-        marginBottom: '30px'
+        marginBottom: '30px',
+        flexWrap: 'wrap' // Mobilde alta geçsin
       }}>
         <input
           type="text"
@@ -170,7 +165,8 @@ const Search = ({ darkMode, onAyahClick }) => {
           onKeyPress={(e) => e.key === 'Enter' && searchInQuran()}
           placeholder={searchType === 'turkish' ? 'Türkçe kelime girin...' : 'Arapça kelime girin...'}
           style={{
-            flex: 1,
+            flex: '1 1 200px', // Minimum 200px
+            minWidth: 0, // Flexbox overflow fix
             padding: '15px',
             fontSize: '16px',
             borderRadius: '8px',
@@ -184,7 +180,7 @@ const Search = ({ darkMode, onAyahClick }) => {
           onClick={searchInQuran}
           disabled={searching}
           style={{
-            padding: '15px 30px',
+            padding: '15px 20px', // 30px'ten 20px'e düşürdüm
             backgroundColor: searching ? '#6b7280' : '#059669',
             color: 'white',
             border: 'none',
@@ -192,14 +188,14 @@ const Search = ({ darkMode, onAyahClick }) => {
             cursor: searching ? 'not-allowed' : 'pointer',
             fontSize: '16px',
             fontWeight: 'bold',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            flexShrink: 0 // Buton küçülmesin
           }}
         >
           {searching ? 'Aranıyor...' : '🔍 Ara'}
         </button>
       </div>
 
-      {/* Yükleme Göstergesi */}
       {searching && (
         <div style={{
           textAlign: 'center',
@@ -215,7 +211,6 @@ const Search = ({ darkMode, onAyahClick }) => {
         </div>
       )}
 
-      {/* Sonuçlar */}
       {!searching && searchResults.length > 0 && (
         <div>
           <div style={{
@@ -241,11 +236,10 @@ const Search = ({ darkMode, onAyahClick }) => {
                   transition: 'all 0.2s',
                   cursor: 'pointer'
                 }}
-                onClick={() => onAyahClick && onAyahClick(result.surahNumber, result.ayahNumber)}
+                onClick={() => onAyahClick && onAyahClick(result.surahNumber, result.ayahNumber, searchQuery)}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = '#059669'}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
               >
-                {/* Sure ve Ayet Bilgisi */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -262,7 +256,7 @@ const Search = ({ darkMode, onAyahClick }) => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onAyahClick && onAyahClick(result.surahNumber, result.ayahNumber);
+                      onAyahClick && onAyahClick(result.surahNumber, result.ayahNumber, searchQuery);
                     }}
                     style={{
                       padding: '6px 12px',
@@ -278,7 +272,6 @@ const Search = ({ darkMode, onAyahClick }) => {
                   </button>
                 </div>
 
-                {/* Arapça */}
                 <div style={{
                   fontSize: '18px',
                   textAlign: 'right',
@@ -290,7 +283,6 @@ const Search = ({ darkMode, onAyahClick }) => {
                   {searchType === 'arabic' ? highlightText(result.arabicText, searchQuery) : result.arabicText}
                 </div>
 
-                {/* Türkçe */}
                 <div style={{
                   fontSize: '15px',
                   lineHeight: '1.6',
@@ -304,7 +296,6 @@ const Search = ({ darkMode, onAyahClick }) => {
         </div>
       )}
 
-      {/* Sonuç Bulunamadı */}
       {!searching && searchQuery && searchResults.length === 0 && (
         <div style={{
           textAlign: 'center',
@@ -321,7 +312,6 @@ const Search = ({ darkMode, onAyahClick }) => {
         </div>
       )}
 
-      {/* Başlangıç Mesajı */}
       {!searching && !searchQuery && searchResults.length === 0 && (
         <div style={{
           textAlign: 'center',

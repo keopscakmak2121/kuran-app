@@ -1,4 +1,4 @@
-// src/utils/notificationStorage.js - CAPACITOR NATIVE VERSION + SOUND OPTIONS
+// src/utils/notificationStorage.js - CAPACITOR NATIVE VERSION + SOUND OPTIONS (FIXED)
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const NOTIFICATION_SETTINGS_KEY = 'quran_notification_settings';
@@ -22,23 +22,47 @@ export const SOUND_OPTIONS = {
   ]
 };
 
-// Varsayılan bildirim ayarları
+// Varsayılan bildirim ayarları (ADJUSTMENT DESTEĞİ EKLENDİ)
 export const getDefaultNotificationSettings = () => ({
-  enabled: false,
+  enabled: true, // ✅ VARSAYILAN AÇIK
   prayerNotifications: {
-    Fajr: { enabled: true, minutesBefore: 10 },
-    Sunrise: { enabled: true, minutesBefore: 5 },
-    Dhuhr: { enabled: true, minutesBefore: 10 },
-    Asr: { enabled: true, minutesBefore: 10 },
-    Maghrib: { enabled: true, minutesBefore: 10 },
-    Isha: { enabled: true, minutesBefore: 10 }
+    Fajr: { 
+      enabled: true, 
+      minutesBefore: 10,
+      adjustment: 0
+    },
+    Sunrise: { 
+      enabled: true, 
+      minutesBefore: 5,
+      adjustment: 0
+    },
+    Dhuhr: { 
+      enabled: true, 
+      minutesBefore: 10,
+      adjustment: 0
+    },
+    Asr: { 
+      enabled: true, 
+      minutesBefore: 10,
+      adjustment: 0
+    },
+    Maghrib: { 
+      enabled: true, 
+      minutesBefore: 10,
+      adjustment: 0
+    },
+    Isha: { 
+      enabled: true, 
+      minutesBefore: 10,
+      adjustment: 0
+    }
   },
   sound: true,
-  soundType: 'adhan', // 'adhan' veya 'notification'
-  selectedAdhan: 'adhan1', // Seçili ezan sesi
-  selectedNotification: 'notification1', // Seçili bildirim sesi
+  soundType: 'adhan',
+  selectedAdhan: 'adhan1',
+  selectedNotification: 'notification1',
   vibration: true,
-  vibrationPattern: [0, 500, 200, 500], // Titreşim deseni (ms)
+  vibrationPattern: [0, 500, 200, 500],
   customMessage: false,
   messageTemplate: '{prayer} namazına {minutes} dakika kaldı'
 });
@@ -48,7 +72,19 @@ export const getNotificationSettings = () => {
   try {
     const settings = localStorage.getItem(NOTIFICATION_SETTINGS_KEY);
     if (settings) {
-      return { ...getDefaultNotificationSettings(), ...JSON.parse(settings) };
+      const parsed = JSON.parse(settings);
+      const defaults = getDefaultNotificationSettings();
+      
+      // Eski ayarları yeni formata dönüştür
+      if (parsed.prayerNotifications) {
+        Object.keys(parsed.prayerNotifications).forEach(prayer => {
+          if (!parsed.prayerNotifications[prayer].adjustment) {
+            parsed.prayerNotifications[prayer].adjustment = 0;
+          }
+        });
+      }
+      
+      return { ...defaults, ...parsed };
     }
     return getDefaultNotificationSettings();
   } catch (error) {
@@ -61,6 +97,7 @@ export const getNotificationSettings = () => {
 export const saveNotificationSettings = (settings) => {
   try {
     localStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+    console.log('💾 Ayarlar kaydedildi:', settings);
     return true;
   } catch (error) {
     console.error('Bildirim ayarları kaydedilirken hata:', error);
@@ -78,7 +115,7 @@ export const toggleAllNotifications = (enabled) => {
 // Ses dosyası yolunu al
 export const getSoundPath = (soundId, soundType) => {
   if (soundId === 'default') {
-    return 'default'; // Sistem varsayılan sesi
+    return 'default';
   }
   
   const soundList = soundType === 'adhan' ? SOUND_OPTIONS.adhan : SOUND_OPTIONS.notification;
@@ -91,8 +128,8 @@ export const getSoundPath = (soundId, soundType) => {
   return 'default';
 };
 
-// Bildirim mesajı oluştur
-export const createNotificationMessage = (prayerName, minutesBefore) => {
+// Bildirim mesajı oluştur (ADJUSTMENT DESTEĞİ EKLENDİ)
+export const createNotificationMessage = (prayerName, adjustment = 0) => {
   const settings = getNotificationSettings();
   const prayerNames = {
     Fajr: 'İmsak',
@@ -108,14 +145,21 @@ export const createNotificationMessage = (prayerName, minutesBefore) => {
   if (settings.customMessage && settings.messageTemplate) {
     return settings.messageTemplate
       .replace('{prayer}', turkishName)
-      .replace('{minutes}', minutesBefore);
+      .replace('{minutes}', Math.abs(adjustment));
   }
 
-  if (minutesBefore === 0) {
+  // Tam vakitte
+  if (adjustment === 0) {
     return `${turkishName} namazı vakti girdi! 🕌`;
   }
 
-  return `${turkishName} namazına ${minutesBefore} dakika kaldı`;
+  // Vakitten önce
+  if (adjustment < 0) {
+    return `${turkishName} namazına ${Math.abs(adjustment)} dakika kaldı`;
+  }
+
+  // Vakitten sonra
+  return `${turkishName} namazı vakti gireli ${adjustment} dakika oldu`;
 };
 
 // ============================================
@@ -127,7 +171,7 @@ export const checkNotificationPermission = async () => {
   try {
     const result = await LocalNotifications.checkPermissions();
     console.log('📱 Native izin durumu:', result.display);
-    return result.display; // 'granted', 'denied', veya 'prompt'
+    return result.display;
   } catch (error) {
     console.error('İzin kontrolü hatası:', error);
     return 'denied';

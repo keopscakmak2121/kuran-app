@@ -2,33 +2,142 @@
 
 const TAFSIR_CACHE_KEY = 'quran_tafsir_cache';
 
-// Mevcut tefsirler
+// MEAL VE TEFSİR KAYNAKLARI (GENİŞLETİLMİŞ)
 export const tafsirs = [
+  // TÜRKÇE TEFSİRLER
   { 
-    id: 'tr.ozturk', 
-    name: 'Öztürk Tefsiri',
-    author: 'Yaşar Nuri Öztürk',
-    language: 'tr'
+    id: 'tr.muyassar', 
+    name: 'Muyassar Tefsiri',
+    author: 'Türkiye Diyanet Vakfı',
+    language: 'tr',
+    type: 'tafsir'
   },
   { 
-    id: 'tr.ayati', 
-    name: 'Ayati Tefsiri',
-    author: 'Muhammed Emîn Şehinşah',
-    language: 'tr'
+    id: 'tr.tafheem', 
+    name: 'Tafhim-ul-Quran',
+    author: 'Ebu\'l A\'la Mevdudi (Türkçe)',
+    language: 'tr',
+    type: 'tafsir'
   },
+  
+  // İNGİLİZCE TEFSİRLER
   { 
     id: 'en.maududi', 
     name: 'Tafhim-ul-Quran',
     author: 'Abul Ala Maududi',
-    language: 'en'
+    language: 'en',
+    type: 'tafsir'
   },
   { 
     id: 'en.jalalayn', 
     name: 'Tafsir al-Jalalayn',
     author: 'Jalal ad-Din al-Mahalli',
-    language: 'en'
+    language: 'en',
+    type: 'tafsir'
+  },
+  
+  // ARAPÇA TEFSİRLER
+  { 
+    id: 'ar.muyassar', 
+    name: 'Tafsir Al-Muyassar',
+    author: 'King Fahad Quran Complex',
+    language: 'ar',
+    type: 'tafsir'
+  },
+  { 
+    id: 'ar.jalalayn', 
+    name: 'Tafsir Al-Jalalayn',
+    author: 'Jalal ad-Din as-Suyuti',
+    language: 'ar',
+    type: 'tafsir'
   }
 ];
+
+// MEAL LİSTESİ (AYRI)
+export const meals = [
+  // TÜRKÇE MEALLER
+  { 
+    id: 'tr.diyanet', 
+    name: 'Diyanet Meali',
+    author: 'Diyanet İşleri Başkanlığı',
+    language: 'tr',
+    type: 'meal'
+  },
+  { 
+    id: 'tr.ates', 
+    name: 'Süleyman Ateş Meali',
+    author: 'Süleyman Ateş',
+    language: 'tr',
+    type: 'meal'
+  },
+  { 
+    id: 'tr.golpinarli', 
+    name: 'Abdülbaki Gölpınarlı Meali',
+    author: 'Abdülbaki Gölpınarlı',
+    language: 'tr',
+    type: 'meal'
+  },
+  { 
+    id: 'tr.yuksel', 
+    name: 'Edip Yüksel Meali',
+    author: 'Edip Yüksel',
+    language: 'tr',
+    type: 'meal'
+  },
+  { 
+    id: 'tr.bulac', 
+    name: 'Mehmet Türkçe Meal',
+    author: 'Mehmet Türkçe',
+    language: 'tr',
+    type: 'meal'
+  },
+  { 
+    id: 'tr.vakfi', 
+    name: 'Diyanet Vakfı Meali',
+    author: 'Diyanet Vakfı',
+    language: 'tr',
+    type: 'meal'
+  },
+  
+  // İNGİLİZCE MEALLER
+  { 
+    id: 'en.sahih', 
+    name: 'Sahih International',
+    author: 'Sahih International',
+    language: 'en',
+    type: 'meal'
+  },
+  { 
+    id: 'en.yusufali', 
+    name: 'Yusuf Ali Translation',
+    author: 'Abdullah Yusuf Ali',
+    language: 'en',
+    type: 'meal'
+  },
+  { 
+    id: 'en.pickthall', 
+    name: 'Pickthall Translation',
+    author: 'Mohammed Pickthall',
+    language: 'en',
+    type: 'meal'
+  },
+  { 
+    id: 'en.hilali', 
+    name: 'Hilali & Khan',
+    author: 'Muhammad Muhsin Khan',
+    language: 'en',
+    type: 'meal'
+  }
+];
+
+// Dil ve tipe göre filtrele
+export const getTafsirsByLanguage = (language) => {
+  return tafsirs.filter(t => t.language === language);
+};
+
+export const getTafsirsByType = (type) => {
+  return tafsirs.filter(t => t.type === type);
+};
 
 // Tefsir cache'inden al
 export const getCachedTafsir = (surahNumber, ayahNumber, tafsirId) => {
@@ -92,9 +201,22 @@ export const fetchTafsir = async (surahNumber, ayahNumber, tafsirId = 'tr.ozturk
       return cached.text;
     }
     
-    // API'den çek
+    // Quran.com API kullan (daha fazla tefsir var)
+    // Resource ID'leri: 161 (Muyassar-TR), 169 (Tafheem-TR), vs.
+    
+    const resourceMap = {
+      'tr.muyassar': 161,  // Muyassar Tefsiri (Türkçe)
+      'tr.tafheem': 169,   // Tafheem-ul-Quran (Türkçe)
+      'en.maududi': 95,    // Tafhim-ul-Quran (English)
+      'en.jalalayn': 93,   // Tafsir al-Jalalayn
+      'ar.muyassar': 168,  // Tafsir Al-Muyassar (Arabic)
+      'ar.jalalayn': 74    // Tafsir al-Jalalayn (Arabic)
+    };
+    
+    const resourceId = resourceMap[tafsirId] || 161;
+    
     const response = await fetch(
-      `https://api.alquran.cloud/v1/ayah/${surahNumber}:${ayahNumber}/${tafsirId}`
+      `https://api.quran.com/api/v4/quran/tafsirs/${resourceId}?verse_key=${surahNumber}:${ayahNumber}`
     );
     
     if (!response.ok) {
@@ -103,8 +225,8 @@ export const fetchTafsir = async (surahNumber, ayahNumber, tafsirId = 'tr.ozturk
     
     const data = await response.json();
     
-    if (data.code === 200 && data.data) {
-      const tafsirText = data.data.text;
+    if (data && data.tafsirs && data.tafsirs[0]) {
+      const tafsirText = data.tafsirs[0].text;
       
       // Cache'e kaydet
       cacheTafsir(surahNumber, ayahNumber, tafsirId, tafsirText);
@@ -112,7 +234,7 @@ export const fetchTafsir = async (surahNumber, ayahNumber, tafsirId = 'tr.ozturk
       return tafsirText;
     }
     
-    return null;
+    return 'Tefsir bulunamadı.';
   } catch (error) {
     console.error('Tefsir yükleme hatası:', error);
     throw error;

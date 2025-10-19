@@ -11,7 +11,7 @@ const TafsirModal = ({
 }) => {
   const [tafsirText, setTafsirText] = useState('');
   const [tafsirLoading, setTafsirLoading] = useState(false);
-  const [selectedTafsir, setSelectedTafsir] = useState('tr.ozturk');
+  const [selectedTafsir, setSelectedTafsir] = useState('tr.muyassar');
 
   const cardBg = darkMode ? '#374151' : 'white';
   const text = darkMode ? '#f3f4f6' : '#1f2937';
@@ -35,6 +35,28 @@ const TafsirModal = ({
     } finally {
       setTafsirLoading(false);
     }
+  };
+
+  // HTML tag'lerini temizle ve formatla
+  const cleanTafsirText = (text) => {
+    if (!text) return '';
+    
+    return text
+      // Tajweed tag'lerini kaldır
+      .replace(/<tajweed[^>]*>/g, '')
+      .replace(/<\/tajweed>/g, '')
+      // Class tag'lerini kaldır
+      .replace(/<class=[^>]*>/g, '')
+      .replace(/<\/class>/g, '')
+      // Span tag'lerini kaldır
+      .replace(/<span[^>]*>/g, '')
+      .replace(/<\/span>/g, '')
+      // Diğer HTML tag'lerini kaldır
+      .replace(/<[^>]+>/g, '')
+      // Çoklu boşlukları tek boşluğa çevir
+      .replace(/\s+/g, ' ')
+      // Başındaki/sonundaki boşlukları temizle
+      .trim();
   };
 
   if (!ayah) return null;
@@ -172,7 +194,7 @@ const TafsirModal = ({
               color: text,
               whiteSpace: 'pre-wrap'
             }}>
-              {tafsirText}
+              {cleanTafsirText(tafsirText)}
             </div>
           )}
         </div>

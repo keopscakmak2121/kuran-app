@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const QiblaFinder = ({ darkMode }) => {
   const [location, setLocation] = useState(null);
@@ -7,6 +7,10 @@ const QiblaFinder = ({ darkMode }) => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState('prompt');
+  
+  // Yumuşatma için
+  const headingHistory = useRef([]);
+  const lastUpdate = useRef(Date.now());
 
   // Kabe'nin koordinatları
   const KAABA = { lat: 21.4225, lng: 39.8262 };
@@ -57,17 +61,41 @@ const QiblaFinder = ({ darkMode }) => {
     );
   };
 
+  // Yumuşatılmış ortalama hesapla
+  const smoothHeading = (newHeading) => {
+    headingHistory.current.push(newHeading);
+    
+    // Son 5 değeri tut
+    if (headingHistory.current.length > 5) {
+      headingHistory.current.shift();
+    }
+    
+    // Ortalama al
+    const sum = headingHistory.current.reduce((a, b) => a + b, 0);
+    return sum / headingHistory.current.length;
+  };
+
   // Pusula yönünü dinle
   useEffect(() => {
     const handleOrientation = (event) => {
+      // Throttle: 100ms'de bir güncelle
+      const now = Date.now();
+      if (now - lastUpdate.current < 100) return;
+      lastUpdate.current = now;
+
       let heading = event.alpha || 0;
       
       // iOS için webkitCompassHeading kullan
-      if (event.webkitCompassHeading) {
+      if (event.webkitCompassHeading !== undefined) {
         heading = event.webkitCompassHeading;
+      } else if (event.alpha !== null) {
+        // Android için alpha'yı kullan (ters çevir)
+        heading = 360 - event.alpha;
       }
       
-      setDeviceHeading(heading);
+      // Yumuşatılmış değeri kullan
+      const smoothed = smoothHeading(heading);
+      setDeviceHeading(smoothed);
     };
 
     // iOS için izin iste
@@ -160,7 +188,7 @@ const QiblaFinder = ({ darkMode }) => {
       borderBottom: '120px solid #10b981',
       transformOrigin: '50% 100%',
       transform: `translate(-50%, -100%) rotate(${calculateArrowRotation()}deg)`,
-      transition: 'transform 0.3s ease-out',
+      transition: 'transform 0.5s ease-out',
       zIndex: 5,
     },
     cardinalPoints: {
@@ -332,4 +360,4 @@ const QiblaFinder = ({ darkMode }) => {
   );
 };
 
-export default QiblaFinder; 
+export default QiblaFinder;

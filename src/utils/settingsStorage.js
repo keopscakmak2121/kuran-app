@@ -4,7 +4,7 @@ const SETTINGS_KEY = 'quran_settings';
 
 // Varsayılan ayarlar
 const getDefaultSettings = () => ({
-  reciter: 'alafasy',
+  reciter: 'Alafasy_128kbps',  // ✅ EVERYAYAH API formatı
   translation: 'tr.diyanet',
   fontSize: 20,
   darkMode: false,
@@ -15,7 +15,7 @@ const getDefaultSettings = () => ({
   showTranslation: true,
   notificationsEnabled: true,
   arabicFont: 'amiri',
-  showTajweed: true  // YENİ EKLEME - Tecvid göster
+  showTajweed: true
 });
 
 // Mevcut meal seçenekleri
@@ -28,37 +28,57 @@ export const translations = [
   { id: 'tr.transliteration', name: 'Transliterasyon', author: 'Okunuş' }
 ];
 
-// Mevcut kari seçenekleri
+// ✅ EVERYAYAH API - CORS friendly kariler
 export const reciters = [
   { 
-    id: 'alafasy', 
+    id: 'Alafasy_128kbps', 
     name: 'Mishary Rashid Alafasy',
-    code: 'Alafasy_128kbps',
     country: 'Kuveyt'
   },
   { 
-    id: 'saad', 
-    name: 'Saad Al-Ghamdi',
-    code: 'Ghamadi_40kbps',
-    country: 'Suudi Arabistan'
-  },
-  { 
-    id: 'abdulbasit', 
+    id: 'Abdul_Basit_Murattal_192kbps', 
     name: 'Abdul Basit Abd us-Samad',
-    code: 'Abdul_Basit_Murattal_192kbps',
     country: 'Mısır'
   },
   { 
-    id: 'hudhaify', 
-    name: 'Ali Al-Hudhaify',
-    code: 'Hudhaify_128kbps',
+    id: 'Abdurrahmaan_As-Sudais_192kbps',
+    name: 'Abdurrahman As-Sudais',
     country: 'Suudi Arabistan'
   },
   { 
-    id: 'muaiqly', 
-    name: 'Maher Al-Muaiqly',
-    code: 'Muaiqly_128kbps',
+    id: 'Abu_Bakr_Ash-Shaatree_128kbps',
+    name: 'Abu Bakr Al-Shatri',
     country: 'Suudi Arabistan'
+  },
+  { 
+    id: 'Ahmed_ibn_Ali_al-Ajamy_128kbps',
+    name: 'Ahmed Al-Ajamy',
+    country: 'Suudi Arabistan'
+  },
+  { 
+    id: 'Ghamadi_40kbps',
+    name: 'Saad Al-Ghamadi',
+    country: 'Suudi Arabistan'
+  },
+  { 
+    id: 'Husary_128kbps',
+    name: 'Mahmoud Khalil Al-Husary',
+    country: 'Mısır'
+  },
+  { 
+    id: 'Maher_AlMuaiqly_128kbps',
+    name: 'Maher Al-Muaiqly',
+    country: 'Suudi Arabistan'
+  },
+  { 
+    id: 'Muhammad_Ayyoub_128kbps',
+    name: 'Muhammad Ayyub',
+    country: 'Suudi Arabistan'
+  },
+  { 
+    id: 'Parhizgar_48kbps',
+    name: 'Shahriar Parhizgar',
+    country: 'İran'
   }
 ];
 
