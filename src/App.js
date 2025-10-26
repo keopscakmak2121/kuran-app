@@ -1,5 +1,8 @@
+// src/App.js - SEARCH STATE DÜZELTİLDİ
+
 import React, { useState, useEffect } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import Header from './components/Header';
 import HomePage from './components/home/HomePage';
 import SurahList from './components/SurahList';
@@ -12,6 +15,7 @@ import Search from './components/Search';
 import Settings from './components/settings/Settings';
 import Statistics from './components/Statistics';
 import Notes from './components/Notes';
+import FullScreenNotification from './components/FullScreenNotification';
 import { allSurahs } from './data/surahs';
 import { 
   downloadSurah, 
@@ -20,7 +24,6 @@ import {
   getTotalSize,
   formatBytes
 } from './utils/audioStorage';
-// 🔔 BİLDİRİM SERVİSİ EKLEME
 import { 
   initNotificationService, 
   scheduleNotifications 
@@ -41,8 +44,15 @@ const App = () => {
   const [downloadedSurahs, setDownloadedSurahs] = useState({});
   const [totalStorageSize, setTotalStorageSize] = useState(0);
   
-  // 🔙 NAVİGASYON GEÇMİŞİ (Stack)
   const [navigationHistory, setNavigationHistory] = useState(['home']);
+
+  const [showFullScreenNotification, setShowFullScreenNotification] = useState(false);
+  const [notificationData, setNotificationData] = useState(null);
+
+  // ✅ SEARCH STATE - YENİ
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchType, setSearchType] = useState('turkish');
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
@@ -50,66 +60,70 @@ const App = () => {
   const cardBg = darkMode ? '#374151' : 'white';
   const text = darkMode ? '#f3f4f6' : '#1f2937';
 
-  // 🔙 ANDROID GERİ TUŞU YÖNETİMİ
   useEffect(() => {
-    const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-      console.log('🔙 Geri tuşuna basıldı, mevcut view:', currentView);
-      console.log('📚 Navigasyon geçmişi:', navigationHistory);
+    let backButtonListener;
+    
+    const setupBackButton = async () => {
+      backButtonListener = await CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        console.log('🔙 Geri tuşuna basıldı, mevcut view:', currentView);
+        console.log('📚 Navigasyon geçmişi:', navigationHistory);
 
-      // KURAN OKUMA EKRANINDAYSAN
-      if (selectedSurah) {
-        console.log('📖 Kuran okuma ekranından çıkılıyor...');
-        handleBackFromQuran();
-        return;
-      }
+        if (showFullScreenNotification) {
+          console.log('📢 Tam ekran bildirim kapatılıyor...');
+          handleCloseFullScreen();
+          return;
+        }
 
-      // ANA SAYFADA DEĞİLSEN
-      if (currentView !== 'home') {
-        console.log('🏠 Ana sayfaya dönülüyor...');
-        navigateBack();
-        return;
-      }
+        if (selectedSurah) {
+          console.log('📖 Kuran okuma ekranından çıkılıyor...');
+          handleBackFromQuran();
+          return;
+        }
 
-      // ANA SAYFADAYSAN - UYGULAMADAN ÇIK
-      console.log('❌ Uygulamadan çıkılıyor...');
-      CapacitorApp.exitApp();
-    });
+        if (currentView !== 'home') {
+          console.log('🏠 Ana sayfaya dönülüyor...');
+          navigateBack();
+          return;
+        }
 
-    // Cleanup
-    return () => {
-      backButtonListener.remove();
+        console.log('❌ Uygulamadan çıkılıyor...');
+        CapacitorApp.exitApp();
+      });
     };
-  }, [currentView, selectedSurah, navigationHistory]);
 
-  // 🔙 GERİ GİTME FONKSİYONU
+    setupBackButton();
+
+    return () => {
+      if (backButtonListener && typeof backButtonListener.remove === 'function') {
+        backButtonListener.remove();
+      }
+    };
+  }, [currentView, selectedSurah, navigationHistory, showFullScreenNotification]);
+
   const navigateBack = () => {
     if (navigationHistory.length > 1) {
       const newHistory = [...navigationHistory];
-      newHistory.pop(); // Mevcut sayfayı çıkar
-      const previousPage = newHistory[newHistory.length - 1]; // Bir önceki sayfayı al
+      newHistory.pop();
+      const previousPage = newHistory[newHistory.length - 1];
       
-      console.log('📍 Geri gidiliyor:', currentView, '→', previousPage);
+      console.log('🔄 Geri gidiliyor:', currentView, '→', previousPage);
       
       setNavigationHistory(newHistory);
       setCurrentView(previousPage);
       setSelectedSurah(null);
     } else {
-      // Geçmiş yoksa ana sayfaya git
       setCurrentView('home');
       setNavigationHistory(['home']);
     }
   };
 
-  // 🔄 SAYFA DEĞİŞTİRME (Geçmişe ekler)
   const handleNavigate = (view) => {
     console.log('🔄 Sayfa değiştiriliyor:', currentView, '→', view);
     
-    // Eğer aynı sayfaya gidiyorsa geçmişe ekleme
     if (view === currentView) {
       return;
     }
 
-    // Geçmişe ekle
     setNavigationHistory([...navigationHistory, view]);
     setCurrentView(view);
     
@@ -118,34 +132,43 @@ const App = () => {
     }
   };
 
-  // 🔔 BİLDİRİM SERVİSİNİ BAŞLAT
   useEffect(() => {
     const initNotifications = async () => {
       try {
         console.log('🚀 Bildirim servisi başlatılıyor...');
         
-        // Konum al ve namaz vakitlerini getir
-        const coords = await getUserLocation();
-        const result = await getPrayerTimesByCoordinates(
-          coords.latitude,
-          coords.longitude
-        );
-
-        if (result.success) {
-          console.log('✅ Namaz vakitleri alındı:', result.timings);
-          
-          // Bildirim servisini başlat
-          const prayerTimingsProvider = async () => {
+        const prayerTimingsProvider = async () => {
+          try {
             const coords = await getUserLocation();
             const result = await getPrayerTimesByCoordinates(
               coords.latitude,
               coords.longitude
             );
             return result.success ? result.timings : null;
-          };
+          } catch (error) {
+            console.error('❌ Prayer timings provider hatası:', error);
+            return null;
+          }
+        };
 
-          await initNotificationService(result.timings, prayerTimingsProvider);
+        const initialTimings = await prayerTimingsProvider();
+        
+        if (initialTimings) {
+          console.log('✅ Namaz vakitleri alındı:', initialTimings);
+          
+          await initNotificationService(initialTimings, prayerTimingsProvider);
           console.log('✅ Bildirim servisi başarıyla başlatıldı');
+          
+          const { getNotificationSettings } = await import('./utils/notificationStorage');
+          const settings = getNotificationSettings();
+          
+          if (settings.persistentNotification) {
+            const { showOngoingNotification } = await import('./utils/ongoingNotification');
+            await showOngoingNotification(initialTimings);
+            console.log('📌 Kalıcı bildirim gösteriliyor');
+          }
+        } else {
+          console.error('❌ İlk namaz vakitleri alınamadı');
         }
       } catch (error) {
         console.error('❌ Bildirim servisi başlatma hatası:', error);
@@ -156,6 +179,75 @@ const App = () => {
     loadDownloadedSurahs();
     loadStorageSize();
   }, []);
+
+  useEffect(() => {
+    let actionListener;
+    let receiveListener;
+
+    const setupNotificationListeners = async () => {
+      actionListener = await LocalNotifications.addListener(
+        'notificationActionPerformed',
+        (notification) => {
+          console.log('📢 ACTION PERFORMED:', notification);
+          handleNotificationAction(notification);
+        }
+      );
+
+      receiveListener = await LocalNotifications.addListener(
+        'localNotificationReceived',
+        (notification) => {
+          console.log('📥 NOTIFICATION RECEIVED:', notification);
+          handleNotificationAction({ notification });
+        }
+      );
+    };
+
+    const handleNotificationAction = (data) => {
+      console.log('🎯 Handling notification:', data);
+      
+      const extra = data.notification?.extra || data.extra;
+      const notificationId = data.notification?.id || data.id;
+      
+      if (extra && extra.action === 'SHOW_FULLSCREEN') {
+        console.log('📱 Tam ekran gösteriliyor:', extra);
+        console.log('🆔 Bildirim ID:', notificationId);
+        
+        setNotificationData({
+          prayerName: extra.prayerName,
+          prayerTime: extra.prayerTime,
+          notificationId: notificationId
+        });
+        
+        setShowFullScreenNotification(true);
+      }
+    };
+
+    setupNotificationListeners();
+
+    return () => {
+      if (actionListener && typeof actionListener.remove === 'function') {
+        actionListener.remove();
+      }
+      if (receiveListener && typeof receiveListener.remove === 'function') {
+        receiveListener.remove();
+      }
+    };
+  }, []);
+
+  const handleCloseFullScreen = async () => {
+    if (notificationData?.notificationId) {
+      try {
+        await LocalNotifications.cancel({
+          notifications: [{ id: notificationData.notificationId }]
+        });
+        console.log('🔇 Bildirim iptal edildi, ezan durdu:', notificationData.notificationId);
+      } catch (error) {
+        console.error('❌ Bildirim iptal hatası:', error);
+      }
+    }
+    setShowFullScreenNotification(false);
+    setNotificationData(null);
+  };
 
   const loadDownloadedSurahs = async () => {
     const downloaded = await getDownloadedSurahs();
@@ -207,7 +299,6 @@ const App = () => {
       setPreviousView(fromView);
       setSelectedSurah(surah);
       
-      // Geçmişe ekle
       setNavigationHistory([...navigationHistory, 'quran']);
       setCurrentView('quran');
     }
@@ -215,7 +306,9 @@ const App = () => {
 
   const handleBackFromQuran = () => {
     setSelectedSurah(null);
-    navigateBack();
+    setCurrentView(previousView);
+    setHighlightWord('');
+    setScrollToAyah(null);
   };
 
   return (
@@ -231,7 +324,6 @@ const App = () => {
         margin: '0 auto', 
         padding: '20px'
       }}>
-        {/* ANA SAYFA */}
         {currentView === 'home' && (
           <HomePage 
             darkMode={darkMode}
@@ -239,7 +331,6 @@ const App = () => {
           />
         )}
 
-        {/* KURAN OKU SAYFASI */}
         {currentView === 'quran' && (
           <div style={{ flex: '1 1 500px', minWidth: '300px' }}>
             {selectedSurah ? (
@@ -270,22 +361,27 @@ const App = () => {
           </div>
         )}
 
-        {/* ESMAÜL HÜSNA */}
         {currentView === 'esma' && (
           <EsmaUlHusna darkMode={darkMode} />
         )}
 
-        {/* AYET ARAMA */}
         {currentView === 'search' && (
           <Search 
             darkMode={darkMode}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchResults={searchResults}
+            setSearchResults={setSearchResults}
+            searchType={searchType}
+            setSearchType={setSearchType}
             onAyahClick={(surahNumber, ayahNumber, searchWord) => {
-              handleAyahClick(surahNumber, ayahNumber, 'search', searchWord);
+              setHighlightWord(searchWord);
+              setScrollToAyah(ayahNumber);
+              handleAyahClick(surahNumber, ayahNumber, 'search');
             }}
           />
         )}
 
-        {/* YER İMLERİ */}
         {currentView === 'bookmarks' && (
           <Bookmarks 
             darkMode={darkMode}
@@ -295,7 +391,6 @@ const App = () => {
           />
         )}
 
-        {/* İNDİRİLENLER */}
         {currentView === 'downloads' && (
           <div style={{
             backgroundColor: cardBg,
@@ -349,17 +444,14 @@ const App = () => {
           </div>
         )}
 
-        {/* NAMAZ VAKİTLERİ */}
         {currentView === 'prayerTimes' && (
           <PrayerTimes darkMode={darkMode} />
         )}
 
-        {/* KIBLE */}
         {currentView === 'qibla' && (
           <QiblaFinder darkMode={darkMode} />
         )}
 
-        {/* NOTLARIM */}
         {currentView === 'notes' && (
           <Notes 
             darkMode={darkMode}
@@ -369,16 +461,23 @@ const App = () => {
           />
         )}
 
-        {/* AYARLAR */}
         {currentView === 'settings' && (
           <Settings darkMode={darkMode} onDarkModeToggle={toggleDarkMode} />
         )}
 
-        {/* İSTATİSTİKLER */}
         {currentView === 'stats' && (
           <Statistics darkMode={darkMode} />
         )}
       </div>
+
+      {showFullScreenNotification && notificationData && (
+        <FullScreenNotification
+          prayerName={notificationData.prayerName}
+          prayerTime={notificationData.prayerTime}
+          darkMode={darkMode}
+          onClose={handleCloseFullScreen}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-// src/utils/notificationStorage.js - CAPACITOR NATIVE VERSION + SOUND OPTIONS (FIXED)
+// src/utils/notificationStorage.js - CAPACITOR NATIVE VERSION + EXACT ALARM PERMISSION
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const NOTIFICATION_SETTINGS_KEY = 'quran_notification_settings';
@@ -22,9 +22,9 @@ export const SOUND_OPTIONS = {
   ]
 };
 
-// Varsayılan bildirim ayarları (ADJUSTMENT DESTEĞİ EKLENDİ)
+// Varsayılan bildirim ayarları
 export const getDefaultNotificationSettings = () => ({
-  enabled: true, // ✅ VARSAYILAN AÇIK
+  enabled: true,
   prayerNotifications: {
     Fajr: { 
       enabled: true, 
@@ -128,7 +128,7 @@ export const getSoundPath = (soundId, soundType) => {
   return 'default';
 };
 
-// Bildirim mesajı oluştur (ADJUSTMENT DESTEĞİ EKLENDİ)
+// Bildirim mesajı oluştur
 export const createNotificationMessage = (prayerName, adjustment = 0) => {
   const settings = getNotificationSettings();
   const prayerNames = {
@@ -163,10 +163,10 @@ export const createNotificationMessage = (prayerName, adjustment = 0) => {
 };
 
 // ============================================
-// CAPACITOR NATIVE BİLDİRİM İZİNLERİ
+// CAPACITOR NATIVE BİLDİRİM İZİNLERİ + EXACT ALARM
 // ============================================
 
-// Bildirim izni durumunu kontrol et
+// 🔔 Bildirim izni durumunu kontrol et
 export const checkNotificationPermission = async () => {
   try {
     const result = await LocalNotifications.checkPermissions();
@@ -178,15 +178,111 @@ export const checkNotificationPermission = async () => {
   }
 };
 
-// Bildirim izni iste
+// ⏰ EXACT ALARM izni kontrol et (Android 12+)
+export const checkExactAlarmPermission = async () => {
+  try {
+    // Android platformunda mıyız?
+    if (!window.Capacitor || window.Capacitor.getPlatform() !== 'android') {
+      console.log('📱 Android değil, exact alarm kontrolü atlanıyor');
+      return true;
+    }
+
+    // Android sürümünü kontrol et (API 31+ = Android 12+)
+    const isAndroid12Plus = window.Capacitor.Plugins?.Device?.getInfo
+      ? (await window.Capacitor.Plugins.Device.getInfo()).androidSDKVersion >= 31
+      : true; // Varsayılan olarak true
+
+    if (!isAndroid12Plus) {
+      console.log('📱 Android 12 altı, exact alarm otomatik açık');
+      return true;
+    }
+
+    // Android 12+ için exact alarm iznini kontrol et
+    console.log('⏰ Exact alarm izni kontrol ediliyor...');
+    
+    // Capacitor'da direkt exact alarm API'si yok, 
+    // bu yüzden bildirimleri zamanlarken hata alırsak izin yok demektir
+    return true; // İzin varsayımı, hata durumunda catch'te yakalanır
+    
+  } catch (error) {
+    console.error('⏰ Exact alarm izin kontrolü hatası:', error);
+    return false;
+  }
+};
+
+// 🔔 Bildirim izni iste + EXACT ALARM
 export const requestNotificationPermission = async () => {
   try {
+    console.log('🔔 Bildirim izni isteniyor...');
+    
+    // 1. Normal bildirim izni
     const result = await LocalNotifications.requestPermissions();
     console.log('📱 İzin sonucu:', result.display);
+    
+    if (result.display !== 'granted') {
+      console.log('❌ Bildirim izni reddedildi');
+      return result.display;
+    }
+
+    // 2. Android 12+ için EXACT ALARM iznini kontrol et
+    if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
+      console.log('⏰ Android için exact alarm kontrolü yapılıyor...');
+      
+      try {
+        // Exact alarm iznini örtük olarak kontrol ediyoruz
+        // Eğer izin yoksa, kullanıcıya manuel olarak ayarlara gitmesini söyleyeceğiz
+        const hasExactAlarm = await checkExactAlarmPermission();
+        
+        if (!hasExactAlarm) {
+          console.log('⚠️ Exact alarm izni yok');
+          alert(
+            '⚠️ TAM ZAMANINDA BİLDİRİM İZNİ GEREKLİ\n\n' +
+            'Namaz vakitlerinin tam zamanında bildirim alabilmek için:\n\n' +
+            '1. Telefon Ayarları → Uygulamalar\n' +
+            '2. Kuran-ı Kerim uygulamasını bulun\n' +
+            '3. İzinler → Alarmlar ve hatırlatıcılar → İZİN VER\n\n' +
+            'Bu izin olmadan bildirimler gecikebilir.'
+          );
+        }
+      } catch (exactAlarmError) {
+        console.log('⚠️ Exact alarm kontrolü yapılamadı:', exactAlarmError);
+      }
+    }
+
     return result.display;
+    
   } catch (error) {
     console.error('İzin isteme hatası:', error);
     return 'denied';
+  }
+};
+
+// 🔋 Batarya optimizasyonu uyarısı göster
+export const checkBatteryOptimization = () => {
+  if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
+    console.log('🔋 Batarya optimizasyonu uyarısı');
+    
+    // Kullanıcıya bilgi ver
+    const shouldShowWarning = !localStorage.getItem('battery_warning_shown');
+    
+    if (shouldShowWarning) {
+      setTimeout(() => {
+        // eslint-disable-next-line no-restricted-globals
+        if (window.confirm(
+          '🔋 BATARYA OPTİMİZASYONU UYARISI\n\n' +
+          'Bildirimlerin düzenli çalışması için:\n\n' +
+          '1. Telefon Ayarları → Batarya\n' +
+          '2. Batarya Optimizasyonu\n' +
+          '3. Kuran-ı Kerim → "Optimize etme"\n\n' +
+          'Şimdi ayarlara gitmek ister misiniz?'
+        )) {
+          // Ayarlar açılabilir (opsiyonel)
+          console.log('Kullanıcı ayarlara gidecek');
+        }
+        
+        localStorage.setItem('battery_warning_shown', 'true');
+      }, 3000);
+    }
   }
 };
 

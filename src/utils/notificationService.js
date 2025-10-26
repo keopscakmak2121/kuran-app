@@ -1,4 +1,5 @@
-// src/utils/notificationService.js - CAPACITOR NATIVE VERSION + SOUND & VIBRATION (FIXED V2)
+// src/utils/notificationService.js - TAMAMI (EXTRA DATA EKLENMİŞ)
+
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { 
   getNotificationSettings, 
@@ -11,25 +12,21 @@ import {
 // ANDROID BİLDİRİM KANALI
 // ============================================
 
-// Bildirim kanalını oluştur - DİNAMİK KANAL (Her ses için ayrı)
-export const createNotificationChannel = async (soundFile = null) => {
+// Bildirim kanalını oluştur - SABİT KANAL
+export const createNotificationChannel = async () => {
   try {
-    // Ses varsa kanal ID'sine ekle
-    const channelId = soundFile ? `prayer-times-${soundFile}` : 'prayer-times-default';
-    const channelName = soundFile ? `Namaz Vakitleri (${soundFile})` : 'Namaz Vakitleri';
-    
     await LocalNotifications.createChannel({
-      id: channelId,
-      name: channelName,
+      id: 'prayer-times',
+      name: 'Namaz Vakitleri',
       description: 'Namaz vakti bildirimleri',
       importance: 5,
       visibility: 1,
-      sound: soundFile || undefined,
+      sound: 'adhan1.mp3', // Varsayılan ses
       vibration: true
     });
     
-    console.log(`✅ Bildirim kanalı oluşturuldu: ${channelId}`);
-    return channelId;
+    console.log('✅ Bildirim kanalı oluşturuldu: prayer-times');
+    return 'prayer-times';
   } catch (error) {
     console.error('❌ Kanal oluşturma hatası:', error);
     throw error;
@@ -40,7 +37,7 @@ export const createNotificationChannel = async (soundFile = null) => {
 // NATIVE BİLDİRİM YÖNETİMİ
 // ============================================
 
-// Bildirim sistemini başlat (DİNAMİK KANAL)
+// Bildirim sistemini başlat
 export const initNotificationSystem = async () => {
   try {
     const permission = await checkNotificationPermission();
@@ -50,7 +47,17 @@ export const initNotificationSystem = async () => {
       return { success: false, reason: permission };
     }
 
-    // Varsayılan kanal oluştur (ses olmadan)
+    // Android 12+ için EXACT ALARM izni kontrol et
+    if (window.Capacitor && window.Capacitor.getPlatform() === 'android') {
+      try {
+        const { display } = await LocalNotifications.checkPermissions();
+        console.log('📱 Bildirim izni:', display);
+      } catch (e) {
+        console.log('⚠️ İzin kontrolü yapılamadı:', e);
+      }
+    }
+
+    // Kanal oluştur
     await createNotificationChannel();
 
     console.log('✅ Bildirim sistemi hazır');
@@ -115,11 +122,11 @@ export const calculateNotificationTimes = (prayerTimings) => {
   );
 };
 
-// 🔊 SES DOSYASINI BELİRLE (ANDROID NATIVE FORMAT) - .mp3 UZANTISI KALDIRILDI
+// 📊 SES DOSYASINI BELİRLE
 const getNativeSound = (settings) => {
   if (!settings.sound) {
     console.log('🔇 Ses kapalı');
-    return null; // Ses kapalıysa null döner
+    return null;
   }
 
   let soundFile = null;
@@ -127,17 +134,17 @@ const getNativeSound = (settings) => {
   // Ezan sesi seçiliyse
   if (settings.soundType === 'adhan') {
     const selectedAdhan = settings.selectedAdhan || 'adhan1';
-    soundFile = selectedAdhan; // Android: UZANTI OLMADAN! (res/raw/adhan1.mp3)
+    soundFile = selectedAdhan;
     console.log(`🕌 Ezan sesi seçildi: ${soundFile}`);
   } 
   // Bildirim sesi seçiliyse
   else {
     const selectedNotif = settings.selectedNotification || 'notification1';
     if (selectedNotif === 'default') {
-      soundFile = null; // Sistem varsayılan sesi için null
+      soundFile = null;
       console.log('🔔 Sistem varsayılan sesi kullanılacak');
     } else {
-      soundFile = selectedNotif; // Android: UZANTI OLMADAN! (res/raw/notification1.mp3)
+      soundFile = selectedNotif;
       console.log(`🔔 Bildirim sesi seçildi: ${soundFile}`);
     }
   }
@@ -145,7 +152,10 @@ const getNativeSound = (settings) => {
   return soundFile;
 };
 
-// Bildirimleri zamanla (NATIVE + SOUND - DÜZELTİLDİ V2)
+// ⏰ TEST BİLDİRİMİ AKTİF/PASİF KONTROLÜ
+const ENABLE_TEST_NOTIFICATION = false; // true = aktif, false = pasif
+
+// Bildirimleri zamanla - GÜNCELLENDİ
 export const scheduleNotifications = async (prayerTimings) => {
   try {
     const notificationTimes = calculateNotificationTimes(prayerTimings);
@@ -164,7 +174,7 @@ export const scheduleNotifications = async (prayerTimings) => {
       console.log(`🗑️ ${pending.notifications.length} eski bildirim temizlendi`);
     }
 
-    // 🔊 Ses dosyasını belirle
+    // 📊 Ses dosyasını belirle
     const soundFile = getNativeSound(settings);
 
     // Yeni bildirimleri hazırla
@@ -178,21 +188,31 @@ export const scheduleNotifications = async (prayerTimings) => {
         Isha: 'Yatsı'
       };
 
+      const scheduleTime = new Date(notif.notificationTime);
+
       const notification = {
         id: notif.id,
         title: `🕌 ${prayerNames[notif.prayerName]} Vakti`,
         body: notif.message,
-        schedule: { at: new Date(notif.notificationTime) },
+        schedule: { 
+          at: scheduleTime,
+          allowWhileIdle: true
+        },
         channelId: 'prayer-times',
-        smallIcon: 'ic_stat_mosque', // Android icon
+        smallIcon: 'ic_stat_mosque',
         ongoing: false,
-        autoCancel: true
+        autoCancel: true,
+        // ✅ EXTRA DATA EKLENDİ
+        extra: {
+          prayerName: notif.prayerName,
+          prayerTime: prayerTimings[notif.prayerName],
+          action: 'SHOW_FULLSCREEN'
+        }
       };
 
-      // 🔊 Ses ekle (DÜZELTİLMİŞ)
+      // 📊 Ses ekle
       if (soundFile) {
         notification.sound = soundFile;
-        notification.soundName = soundFile;
       }
 
       // 📳 Titreşim ekle
@@ -200,18 +220,59 @@ export const scheduleNotifications = async (prayerTimings) => {
         notification.vibrate = true;
       }
 
-      console.log(`📋 Bildirim hazırlandı: ${prayerNames[notif.prayerName]} - ${new Date(notif.notificationTime).toLocaleString('tr-TR')}`);
-      console.log(`   🔊 Ses: ${soundFile || 'kapalı'}`);
+      console.log(`📋 Bildirim hazırlandı: ${prayerNames[notif.prayerName]} - ${scheduleTime.toLocaleString('tr-TR')}`);
+      console.log(`   📊 Ses: ${soundFile || 'kapalı'}`);
       console.log(`   📳 Titreşim: ${settings.vibration ? 'açık' : 'kapalı'}`);
 
       return notification;
     });
 
+    // ⏰ TEST BİLDİRİMİ - AKTİF/PASİF
+    if (ENABLE_TEST_NOTIFICATION) {
+      const testTime = new Date(Date.now() + 60000); // 1 dakika sonra
+      const testNotification = {
+        id: 99999,
+        title: '🕌 TEST - İmsak Vakti',
+        body: `1 dakika sonra test bildirimi - ${testTime.toLocaleTimeString('tr-TR')}`,
+        schedule: { 
+          at: testTime,
+          allowWhileIdle: true
+        },
+        channelId: 'prayer-times',
+        smallIcon: 'ic_stat_mosque',
+        ongoing: false,
+        autoCancel: true,
+        // ✅ TEST İÇİN DE EXTRA DATA
+        extra: {
+          prayerName: 'Fajr',
+          prayerTime: prayerTimings['Fajr'] || '05:00',
+          action: 'SHOW_FULLSCREEN'
+        }
+      };
+
+      if (soundFile) {
+        testNotification.sound = soundFile;
+      }
+
+      if (settings.vibration) {
+        testNotification.vibrate = true;
+      }
+
+      notifications.push(testNotification);
+      console.log(`⏰ TEST BİLDİRİM EKLENDİ - ${testTime.toLocaleTimeString('tr-TR')} gelecek!`);
+    }
+
     // Bildirimleri zamanla
     await LocalNotifications.schedule({ notifications });
 
-    console.log(`✅ ${notifications.length} bildirim zamanlandı`);
-    console.log(`🔊 Aktif ses dosyası: ${soundFile || 'kapalı'}`);
+    console.log(`✅ ${notifications.length} bildirim zamanlandı${ENABLE_TEST_NOTIFICATION ? ' (1 test dahil)' : ''}`);
+    console.log(`📊 Aktif ses dosyası: ${soundFile || 'kapalı'}`);
+    
+    // Zamanlanmış bildirimleri kontrol et
+    setTimeout(async () => {
+      const pending = await LocalNotifications.getPending();
+      console.log(`📋 Bekleyen bildirimler (${pending.notifications.length}):`, pending.notifications);
+    }, 2000);
     
     return notificationTimes;
   } catch (error) {
@@ -221,7 +282,7 @@ export const scheduleNotifications = async (prayerTimings) => {
   }
 };
 
-// Test bildirimi gönder (DİNAMİK KANAL KULLANIMI)
+// Test bildirimi gönder
 export const sendTestNotification = async () => {
   try {
     console.log('🚀 Test bildirimi başlıyor...');
@@ -238,28 +299,33 @@ export const sendTestNotification = async () => {
     const settings = getNotificationSettings();
     console.log('⚙️ Ayarlar:', settings);
 
-    // 🔊 Ses dosyasını belirle
+    // 📊 Ses dosyasını belirle
     const soundFile = getNativeSound(settings);
-
-    // KANAL OLUŞTUR (Ses ile birlikte)
-    console.log('🔄 Bildirim kanalı oluşturuluyor...');
-    const channelId = await createNotificationChannel(soundFile);
 
     const notification = {
       id: Math.floor(Math.random() * 100000),
       title: '🕌 Test Bildirimi',
       body: 'Bildirimler çalışıyor! ✅',
-      channelId: channelId, // Dinamik kanal ID
+      channelId: 'prayer-times',
       smallIcon: 'ic_stat_mosque',
       ongoing: false,
-      autoCancel: true
+      autoCancel: true,
+      schedule: { 
+        at: new Date(Date.now() + 500),
+        allowWhileIdle: true
+      },
+      // ✅ TEST BUTONUNA DA EXTRA DATA
+      extra: {
+        prayerName: 'Fajr',
+        prayerTime: '05:00',
+        action: 'SHOW_FULLSCREEN'
+      }
     };
 
-    // 🔊 Ses ekle
+    // 📊 Ses ekle
     if (soundFile) {
       notification.sound = soundFile;
-      notification.soundName = soundFile;
-      console.log(`🔊 Ses dosyası: ${soundFile}`);
+      console.log(`📊 Ses dosyası: ${soundFile}`);
     }
 
     // 📳 Titreşim ekle
@@ -270,21 +336,12 @@ export const sendTestNotification = async () => {
 
     console.log('📦 Bildirim objesi:', JSON.stringify(notification, null, 2));
 
-    // ANINDA BİLDİRİM
+    // BİLDİRİM GÖNDER
     const result = await LocalNotifications.schedule({ 
-      notifications: [{
-        ...notification,
-        schedule: { at: new Date(Date.now() + 500) }
-      }]
+      notifications: [notification]
     });
     
     console.log('✅ Schedule sonucu:', result);
-    
-    // Pending bildirimleri kontrol et
-    setTimeout(async () => {
-      const pending = await LocalNotifications.getPending();
-      console.log(`📋 Bekleyen bildirimler (${pending.notifications.length}):`, pending.notifications);
-    }, 1000);
 
   } catch (error) {
     console.error('❌ Test bildirimi HATASI:', error);
@@ -399,4 +456,4 @@ export const initNotificationService = async (prayerTimings, prayerTimingsProvid
     console.error('❌ Bildirim servisi başlatma hatası:', error);
     return false;
   }
-}
+};

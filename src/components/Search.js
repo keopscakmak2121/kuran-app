@@ -1,12 +1,18 @@
-// src/components/Search.js
+// src/components/Search.js - PROPS DÜZELTİLDİ
 import React, { useState } from 'react';
 import { allSurahs } from '../data/surahs';
 
-const Search = ({ darkMode, onAyahClick }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+const Search = ({ 
+  darkMode, 
+  onAyahClick,
+  searchQuery,
+  setSearchQuery,
+  searchResults,
+  setSearchResults,
+  searchType,
+  setSearchType
+}) => {
   const [searching, setSearching] = useState(false);
-  const [searchType, setSearchType] = useState('turkish');
 
   const cardBg = darkMode ? '#374151' : 'white';
   const text = darkMode ? '#f3f4f6' : '#1f2937';
@@ -156,7 +162,7 @@ const Search = ({ darkMode, onAyahClick }) => {
         display: 'flex', 
         gap: '10px', 
         marginBottom: '30px',
-        flexWrap: 'wrap' // Mobilde alta geçsin
+        flexWrap: 'wrap'
       }}>
         <input
           type="text"
@@ -165,8 +171,8 @@ const Search = ({ darkMode, onAyahClick }) => {
           onKeyPress={(e) => e.key === 'Enter' && searchInQuran()}
           placeholder={searchType === 'turkish' ? 'Türkçe kelime girin...' : 'Arapça kelime girin...'}
           style={{
-            flex: '1 1 200px', // Minimum 200px
-            minWidth: 0, // Flexbox overflow fix
+            flex: '1 1 200px',
+            minWidth: 0,
             padding: '15px',
             fontSize: '16px',
             borderRadius: '8px',
@@ -180,7 +186,7 @@ const Search = ({ darkMode, onAyahClick }) => {
           onClick={searchInQuran}
           disabled={searching}
           style={{
-            padding: '15px 20px', // 30px'ten 20px'e düşürdüm
+            padding: '15px 20px',
             backgroundColor: searching ? '#6b7280' : '#059669',
             color: 'white',
             border: 'none',
@@ -189,7 +195,7 @@ const Search = ({ darkMode, onAyahClick }) => {
             fontSize: '16px',
             fontWeight: 'bold',
             whiteSpace: 'nowrap',
-            flexShrink: 0 // Buton küçülmesin
+            flexShrink: 0
           }}
         >
           {searching ? 'Aranıyor...' : '🔍 Ara'}

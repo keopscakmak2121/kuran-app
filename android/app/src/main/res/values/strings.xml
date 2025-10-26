@@ -4,4 +4,8 @@
     <string name="title_activity_main">kuran-app</string>
     <string name="package_name">com.quran.kerim</string>
     <string name="custom_url_scheme">com.quran.kerim</string>
+	<!-- Widget Descriptions -->
+    <string name="widget_small_description">Sonraki namaz vakti</string>
+    <string name="widget_medium_description">Tüm namaz vakitleri</string>
+    <string name="widget_large_description">Detaylı namaz vakitleri</string>
 </resources>

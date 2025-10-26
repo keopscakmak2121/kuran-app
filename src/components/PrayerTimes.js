@@ -1,4 +1,5 @@
-// src/components/PrayerTimes.js
+// src/components/PrayerTimes.js - WIDGET GÜNCELLEMESI EKLENDI
+
 import React, { useState, useEffect } from 'react';
 import {
   getPrayerTimesByCoordinates,
@@ -12,6 +13,12 @@ import {
   initNotificationService,
   checkAndRefreshNotifications
 } from '../utils/notificationService';
+import { updatePrayerWidget } from '../utils/widgetBridge';
+import { 
+  showOngoingNotification, 
+  hideOngoingNotification 
+} from '../utils/ongoingNotification';
+import { getNotificationSettings } from '../utils/notificationStorage';
 
 const PrayerTimes = ({ darkMode }) => {
   const [timings, setTimings] = useState(null);
@@ -29,7 +36,6 @@ const PrayerTimes = ({ darkMode }) => {
   const cardBg = darkMode ? '#374151' : 'white';
   const text = darkMode ? '#f3f4f6' : '#1f2937';
 
-  // Namaz duaları
   const prayerDuas = {
     'Fajr': 'Allahümme bârik lenâ fî sehârinâ',
     'Dhuhr': 'Allahümme innî es\'elüke hayre hâzâ-l yevmi',
@@ -64,7 +70,6 @@ const PrayerTimes = ({ darkMode }) => {
     if (timings) setNextPrayer(getNextPrayer(timings));
   }, [timings]);
 
-  // Namaz vakti kontrolü
   const checkPrayerTime = () => {
     if (!timings) return;
 
@@ -130,7 +135,11 @@ const PrayerTimes = ({ darkMode }) => {
         if (result.success) {
           setTimings(result.timings);
           await initNotificationService(result.timings, getPrayerTimingsProvider);
-          console.log('✅ Bildirimler ayarlandı!');
+          
+          // ✅ Widget'ı güncelle
+          await updatePrayerWidget(result.timings);
+          
+          console.log('✅ Bildirimler ve widget ayarlandı!');
         } else {
           throw new Error(result.error);
         }
@@ -148,7 +157,11 @@ const PrayerTimes = ({ darkMode }) => {
             setTimings(result.timings);
             setLocation({ latitude: city.latitude, longitude: city.longitude });
             await initNotificationService(result.timings, getPrayerTimingsProvider);
-            console.log('✅ Bildirimler ayarlandı!');
+            
+            // ✅ Widget'ı güncelle
+            await updatePrayerWidget(result.timings);
+            
+            console.log('✅ Bildirimler ve widget ayarlandı!');
           } else {
             throw new Error(result.error);
           }
@@ -190,7 +203,6 @@ const PrayerTimes = ({ darkMode }) => {
 
   return (
     <>
-      {/* TAM EKRAN NAMAZ VAKTİ BİLDİRİMİ - MODERN MİNİMALİST */}
       {showPrayerAlert && currentPrayerAlert && (() => {
         const colors = {
           'Fajr': { bg: '#1a1f3a', accent: '#4a5578' },
@@ -217,7 +229,6 @@ const PrayerTimes = ({ darkMode }) => {
           animation: 'fadeIn 0.4s ease-in',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
         }}>
-          {/* Subtle Pattern Overlay */}
           <div style={{
             position: 'absolute',
             top: 0,
@@ -238,7 +249,6 @@ const PrayerTimes = ({ darkMode }) => {
             zIndex: 1,
             animation: 'slideUp 0.5s ease-out'
           }}>
-            {/* Minimalist Icon */}
             <div style={{
               width: '100px',
               height: '100px',
@@ -257,7 +267,6 @@ const PrayerTimes = ({ darkMode }) => {
               </svg>
             </div>
 
-            {/* Namaz Adı */}
             <h1 style={{
               fontSize: '52px',
               fontWeight: '300',
@@ -268,7 +277,6 @@ const PrayerTimes = ({ darkMode }) => {
               {currentPrayerAlert.name}
             </h1>
 
-            {/* "Vakti" kelimesi */}
             <div style={{
               fontSize: '18px',
               fontWeight: '400',
@@ -280,7 +288,6 @@ const PrayerTimes = ({ darkMode }) => {
               VAKTİ
             </div>
 
-            {/* Saat */}
             <div style={{
               fontSize: '56px',
               fontWeight: '200',
@@ -291,7 +298,6 @@ const PrayerTimes = ({ darkMode }) => {
               {currentPrayerAlert.time}
             </div>
 
-            {/* Ayet - Daha okunabilir */}
             <div style={{
               fontSize: '15px',
               lineHeight: '1.8',
@@ -307,7 +313,6 @@ const PrayerTimes = ({ darkMode }) => {
               {currentPrayerAlert.verse}
             </div>
 
-            {/* Dua - Daha subtle */}
             <div style={{
               fontSize: '13px',
               marginBottom: '50px',
@@ -321,7 +326,6 @@ const PrayerTimes = ({ darkMode }) => {
               {currentPrayerAlert.dua}
             </div>
 
-            {/* Modern Minimalist Button */}
             <button
               onClick={() => setShowPrayerAlert(false)}
               style={{
@@ -369,7 +373,6 @@ const PrayerTimes = ({ darkMode }) => {
         );
       })()}
 
-      {/* NORMAL NAMAZ VAKİTLERİ EKRANI */}
       <div style={{
         backgroundColor: cardBg,
         borderRadius: '12px',
@@ -378,7 +381,6 @@ const PrayerTimes = ({ darkMode }) => {
       }}>
         <h2 style={{ fontSize: '24px', margin: '0 0 20px 0', color: text }}>Namaz Vakitleri</h2>
 
-        {/* Konum Seçimi */}
         <div style={{
           marginBottom: '20px',
           padding: '15px',
@@ -457,33 +459,6 @@ const PrayerTimes = ({ darkMode }) => {
             }}
           >
             {loading ? 'Yükleniyor...' : 'Vakitleri Getir'}
-          </button>
-
-          <button
-            onClick={() => {
-              setCurrentPrayerAlert({
-                name: 'Öğle',
-                key: 'Dhuhr',
-                time: '12:30',
-                dua: prayerDuas['Dhuhr'],
-                verse: prayerVerses['Dhuhr']
-              });
-              setShowPrayerAlert(true);
-            }}
-            style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#dc2626',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '600',
-              marginTop: '10px'
-            }}
-          >
-            🧪 Tam Ekran Testi
           </button>
         </div>
 

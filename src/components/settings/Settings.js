@@ -1,4 +1,5 @@
-// src/components/settings/Settings.js
+// src/components/settings/Settings.js - KALICI BİLDİRİM EKLENDİ
+
 import React, { useState, useEffect } from 'react';
 import { 
   getSettings, 
@@ -10,6 +11,13 @@ import {
   saveNotificationSettings,
   checkNotificationPermission
 } from '../../utils/notificationStorage';
+import { 
+  scheduleNotifications 
+} from '../../utils/notificationService';
+import { 
+  getPrayerTimesByCoordinates, 
+  getUserLocation 
+} from '../../utils/prayerTimesApi';
 
 // Import sub-components
 import NotificationSettings from './NotificationSettings';
@@ -48,6 +56,28 @@ const Settings = ({ darkMode, onDarkModeToggle }) => {
     setNotificationPermission(permission);
   };
 
+  const rescheduleNotifications = async () => {
+    try {
+      console.log('🔄 Bildirimler yeniden zamanlanıyor...');
+      
+      const coords = await getUserLocation();
+      const result = await getPrayerTimesByCoordinates(
+        coords.latitude,
+        coords.longitude
+      );
+
+      if (result.success) {
+        console.log('✅ Namaz vakitleri alındı:', result.timings);
+        await scheduleNotifications(result.timings);
+        console.log('✅ Bildirimler güncellendi');
+      } else {
+        console.error('❌ Namaz vakitleri alınamadı');
+      }
+    } catch (error) {
+      console.error('❌ Bildirim zamanlama hatası:', error);
+    }
+  };
+
   const handleChange = (key, value) => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
@@ -57,20 +87,42 @@ const Settings = ({ darkMode, onDarkModeToggle }) => {
     setTimeout(() => setSaving(false), 1000);
   };
 
-  const handleNotificationChange = (key, value) => {
+  const handleNotificationChange = async (key, value) => {
     const newSettings = { ...notificationSettings, [key]: value };
     setNotificationSettings(newSettings);
     saveNotificationSettings(newSettings);
+    
+    // ✅ KALICI BİLDİRİM KONTROLÜ - YENİ
+    if (key === 'persistentNotification') {
+      const { showOngoingNotification, hideOngoingNotification } = await import('../../utils/ongoingNotification');
+      
+      if (value) {
+        // Açıldı - kalıcı bildirimi göster
+        const coords = await getUserLocation();
+        const result = await getPrayerTimesByCoordinates(coords.latitude, coords.longitude);
+        if (result.success) {
+          await showOngoingNotification(result.timings);
+        }
+      } else {
+        // Kapatıldı - kalıcı bildirimi gizle
+        await hideOngoingNotification();
+      }
+    }
+    
+    // ✅ Bildirim ayarları değiştiğinde yeniden zamanla
+    await rescheduleNotifications();
     
     setSaving(true);
     setTimeout(() => setSaving(false), 1000);
   };
 
-  const handlePrayerNotificationChange = (prayerName, key, value) => {
+  const handlePrayerNotificationChange = async (prayerName, key, value) => {
     const newSettings = { ...notificationSettings };
     newSettings.prayerNotifications[prayerName][key] = value;
     setNotificationSettings(newSettings);
     saveNotificationSettings(newSettings);
+    
+    await rescheduleNotifications();
     
     setSaving(true);
     setTimeout(() => setSaving(false), 1000);

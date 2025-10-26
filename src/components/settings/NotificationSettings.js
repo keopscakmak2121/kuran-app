@@ -1,4 +1,4 @@
-// src/components/settings/NotificationSettings.js - SES ÖNİZLEME DÜZELTİLDİ
+// src/components/settings/NotificationSettings.js - KALICI BİLDİRİM EKLENDİ
 
 import React, { useState, useRef, useEffect } from 'react';
 import { requestNotificationPermission, SOUND_OPTIONS } from '../../utils/notificationStorage';
@@ -16,12 +16,10 @@ const NotificationSettings = ({
   const textSec = darkMode ? '#9ca3af' : '#6b7280';
   const cardBg = darkMode ? '#4b5563' : '#f9fafb';
 
-  // 🔊 Ses önizleme için state ve ref
   const [playingSound, setPlayingSound] = useState(null);
   const audioRef = useRef(null);
   const intervalRef = useRef(null);
 
-  // Cleanup: Component unmount olduğunda sesi durdur
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -35,11 +33,7 @@ const NotificationSettings = ({
     };
   }, []);
 
-  // 🔊 Ses önizleme fonksiyonu - TAMAMEN YENİDEN YAZILDI
   const handlePreviewSound = (soundFile, soundId) => {
-    console.log('🔊 handlePreviewSound çağrıldı:', soundId, 'Şu an çalan:', playingSound);
-
-    // Eğer aynı ses çalıyorsa DURDUR
     if (playingSound === soundId) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -53,11 +47,9 @@ const NotificationSettings = ({
         intervalRef.current = null;
       }
       setPlayingSound(null);
-      console.log('🔇 Ses durduruldu:', soundId);
       return;
     }
 
-    // Önceki sesi tamamen durdur
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -70,17 +62,11 @@ const NotificationSettings = ({
       intervalRef.current = null;
     }
 
-    // STATE'İ HEMEN GÜNCELLE
     setPlayingSound(soundId);
-    console.log('▶️ playingSound state güncellendi:', soundId);
 
-    // Yeni ses oluştur
     const audio = new Audio(`/sounds/${soundFile}`);
     audioRef.current = audio;
 
-    console.log('🎵 Ses dosyası yüklendi:', soundFile);
-
-    // 15 saniye sınırı
     const maxDuration = 15;
 
     audio.play()
@@ -93,7 +79,6 @@ const NotificationSettings = ({
         audioRef.current = null;
       });
 
-    // Her 100ms kontrol et
     intervalRef.current = setInterval(() => {
       if (audio.currentTime >= maxDuration) {
         audio.pause();
@@ -104,11 +89,9 @@ const NotificationSettings = ({
         intervalRef.current = null;
         setPlayingSound(null);
         audioRef.current = null;
-        console.log('⏱️ 15 saniye doldu');
       }
     }, 100);
 
-    // Ses bittiğinde
     audio.onended = () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -116,16 +99,13 @@ const NotificationSettings = ({
       }
       setPlayingSound(null);
       audioRef.current = null;
-      console.log('✅ Ses tamamlandı');
     };
 
-    // Hata
     audio.onerror = () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      console.error('❌ Ses yükleme hatası:', soundFile);
       setPlayingSound(null);
       audioRef.current = null;
     };
@@ -187,7 +167,6 @@ const NotificationSettings = ({
         🔔 Bildirim Ayarları
       </h3>
 
-      {/* İZİN DURUMU BANNER */}
       {notificationPermission === 'prompt' && (
         <div style={{
           padding: '20px',
@@ -260,7 +239,6 @@ const NotificationSettings = ({
         </div>
       )}
 
-      {/* ANA BİLDİRİM AÇ/KAPAT */}
       <div style={{
         padding: '20px',
         backgroundColor: cardBg,
@@ -325,7 +303,6 @@ const NotificationSettings = ({
         </div>
       </div>
 
-      {/* SES AYARLARI */}
       {notificationSettings.enabled && (
         <>
           <div style={{
@@ -343,10 +320,9 @@ const NotificationSettings = ({
               alignItems: 'center',
               gap: '8px'
             }}>
-              🔊 Ses Ayarları
+              📊 Ses Ayarları
             </h4>
 
-            {/* SES AÇ/KAPAT */}
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -401,7 +377,6 @@ const NotificationSettings = ({
               </label>
             </div>
 
-            {/* SES TİPİ SEÇİMİ */}
             {notificationSettings.sound && (
               <>
                 <div style={{ marginBottom: '15px' }}>
@@ -426,7 +401,6 @@ const NotificationSettings = ({
                   </select>
                 </div>
 
-                {/* EZAN SESİ SEÇİMİ */}
                 {notificationSettings.soundType === 'adhan' && (
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ fontSize: '14px', color: text, marginBottom: '8px', display: 'block' }}>
@@ -474,9 +448,7 @@ const NotificationSettings = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Önce sesi seç
                               onNotificationChange('selectedAdhan', sound.id);
-                              // Sonra çal (timeout kaldırıldı)
                               handlePreviewSound(sound.file, sound.id);
                             }}
                             style={{
@@ -493,7 +465,7 @@ const NotificationSettings = ({
                               fontWeight: 'bold'
                             }}
                           >
-                            {playingSound === sound.id ? '⏹️ Durdur' : '🔊 Dinle'}
+                            {playingSound === sound.id ? '⏹️ Durdur' : '📊 Dinle'}
                           </button>
                         </div>
                       ))}
@@ -501,7 +473,6 @@ const NotificationSettings = ({
                   </div>
                 )}
 
-                {/* BİLDİRİM SESİ SEÇİMİ */}
                 {notificationSettings.soundType === 'notification' && (
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ fontSize: '14px', color: text, marginBottom: '8px', display: 'block' }}>
@@ -550,9 +521,7 @@ const NotificationSettings = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Önce sesi seç
                                 onNotificationChange('selectedNotification', sound.id);
-                                // Sonra çal (timeout kaldırıldı)
                                 handlePreviewSound(sound.file, sound.id);
                               }}
                               style={{
@@ -569,7 +538,7 @@ const NotificationSettings = ({
                                 fontWeight: 'bold'
                               }}
                             >
-                              {playingSound === sound.id ? '⏹️ Durdur' : '🔊 Dinle'}
+                              {playingSound === sound.id ? '⏹️ Durdur' : '📊 Dinle'}
                             </button>
                           )}
                         </div>
@@ -581,7 +550,6 @@ const NotificationSettings = ({
             )}
           </div>
 
-          {/* TİTREŞİM */}
           <div style={{
             padding: '20px',
             backgroundColor: cardBg,
@@ -648,7 +616,72 @@ const NotificationSettings = ({
             </div>
           </div>
 
-          {/* TEST BİLDİRİMİ */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: cardBg,
+            borderRadius: '8px',
+            marginBottom: '20px'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'bold', 
+                  color: text,
+                  marginBottom: '5px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  📌 Kalıcı Bildirim
+                </div>
+                <div style={{ fontSize: '13px', color: textSec }}>
+                  Sonraki namaz vakti sürekli gösterimde
+                </div>
+              </div>
+              
+              <label style={{ 
+                position: 'relative', 
+                display: 'inline-block', 
+                width: '50px', 
+                height: '28px' 
+              }}>
+                <input
+                  type="checkbox"
+                  checked={notificationSettings.persistentNotification || false}
+                  onChange={(e) => onNotificationChange('persistentNotification', e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0 }}
+                />
+                <span style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: notificationSettings.persistentNotification ? '#059669' : '#d1d5db',
+                  transition: '0.4s',
+                  borderRadius: '28px'
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    height: '22px',
+                    width: '22px',
+                    left: notificationSettings.persistentNotification ? '25px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.4s',
+                    borderRadius: '50%'
+                  }}></span>
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div style={{
             padding: '20px',
             backgroundColor: cardBg,
@@ -681,7 +714,6 @@ const NotificationSettings = ({
             </div>
           </div>
 
-          {/* NAMAZ VAKİTLERİ */}
           <div style={{
             padding: '20px',
             backgroundColor: cardBg,
