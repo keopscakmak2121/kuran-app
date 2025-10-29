@@ -5,9 +5,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.widget.RemoteViews;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class PrayerWidgetProvider extends AppWidgetProvider {
 
@@ -24,7 +21,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         // Boş - her widget kendi sınıfında güncelleniyor
     }
     
-    // Yardımcı metodlar
     public static String[] getPrayerTimes(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         return new String[]{
@@ -40,9 +36,12 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
     public static String[] getNextPrayerData(Context context) {
         String[] times = getPrayerTimes(context);
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            Date now = new Date();
-            String currentTime = sdf.format(now);
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            int currentHours = cal.get(java.util.Calendar.HOUR_OF_DAY);
+            int currentMinutes = cal.get(java.util.Calendar.MINUTE);
+            int currentTotalMinutes = currentHours * 60 + currentMinutes;
+            
+            android.util.Log.d("WidgetDebug", "Current time: " + currentHours + ":" + currentMinutes);
             
             String[][] prayers = {
                 {"İmsak", times[0]},
@@ -54,11 +53,21 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             };
             
             for (String[] prayer : prayers) {
-                if (currentTime.compareTo(prayer[1]) < 0) {
-                    long diff = sdf.parse(prayer[1]).getTime() - sdf.parse(currentTime).getTime();
-                    long hours = diff / (60 * 60 * 1000);
-                    long minutes = (diff % (60 * 60 * 1000)) / (60 * 1000);
-                    String remaining = hours + "s " + minutes + "dk";
+                String[] prayerTimeParts = prayer[1].split(":");
+                int prayerHours = Integer.parseInt(prayerTimeParts[0]);
+                int prayerMinutes = Integer.parseInt(prayerTimeParts[1]);
+                int prayerTotalMinutes = prayerHours * 60 + prayerMinutes;
+                
+                android.util.Log.d("WidgetDebug", "Checking " + prayer[0] + " at " + prayer[1]);
+                
+                if (currentTotalMinutes < prayerTotalMinutes) {
+                    int diffMinutes = prayerTotalMinutes - currentTotalMinutes;
+                    int hours = diffMinutes / 60;
+                    int minutes = diffMinutes % 60;
+                    String remaining = hours > 0 ? hours + "s " + minutes + "dk" : minutes + "dk";
+                    
+                    android.util.Log.d("WidgetDebug", "Next prayer: " + prayer[0] + " Remaining: " + remaining);
+                    
                     return new String[]{prayer[0], prayer[1], remaining};
                 }
             }
@@ -66,6 +75,7 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
             return new String[]{"İmsak", times[0], "Yarın"};
             
         } catch (Exception e) {
+            android.util.Log.e("WidgetDebug", "Error: " + e.getMessage());
             return new String[]{"İmsak", times[0], "-"};
         }
     }
@@ -82,7 +92,6 @@ public class PrayerWidgetProvider extends AppWidgetProvider {
         editor.putString("yatsi", yatsi);
         editor.apply();
         
-        // Tüm widget'ları güncelle
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
         
         int[] smallIds = appWidgetManager.getAppWidgetIds(

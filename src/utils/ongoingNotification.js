@@ -2,6 +2,7 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const ONGOING_NOTIFICATION_ID = 999999;
+let updateInterval = null;
 
 const createOngoingChannel = async () => {
   try {
@@ -22,16 +23,38 @@ const createOngoingChannel = async () => {
 
 export const showOngoingNotification = async (prayerTimes) => {
   try {
+    console.log('🔔 showOngoingNotification çağrıldı:', prayerTimes);
+    
     await createOngoingChannel();
     
-    const nextPrayer = getNextPrayer(prayerTimes);
+    if (updateInterval) {
+      clearInterval(updateInterval);
+    }
+    
+    await updateNotificationContent(prayerTimes);
+    
+    updateInterval = setInterval(async () => {
+      await updateNotificationContent(prayerTimes);
+    }, 60000);
+    
+    console.log('✅ Kalıcı bildirim gösteriliyor');
+  } catch (error) {
+    console.error('❌ Kalıcı bildirim hatası:', error);
+  }
+};
+
+const updateNotificationContent = async (prayerTimes) => {
+  try {
+    const { current, remaining } = getNextPrayerWithCountdown(prayerTimes);
+    
+    console.log('📝 Bildirim içeriği:', current.name, current.time, remaining);
     
     await LocalNotifications.schedule({
       notifications: [
         {
           id: ONGOING_NOTIFICATION_ID,
-          title: `🕌 Sonraki Namaz: ${nextPrayer.name} Vakti`,
-          body: `⏰ Saat: ${nextPrayer.time}  •  ⏳ Kalan Süre: ${nextPrayer.remaining}`,
+          title: `🕌 ${current.name} - ${current.time}`,
+          body: `⏳ ${remaining}`,
           smallIcon: 'ic_stat_mosque',
           ongoing: true,
           autoCancel: false,
@@ -41,14 +64,19 @@ export const showOngoingNotification = async (prayerTimes) => {
       ]
     });
     
-    console.log('✅ Kalıcı bildirim gösteriliyor');
+    console.log('✅ Bildirim güncellendi');
   } catch (error) {
-    console.error('❌ Kalıcı bildirim hatası:', error);
+    console.error('❌ Bildirim güncelleme hatası:', error);
   }
 };
 
 export const hideOngoingNotification = async () => {
   try {
+    if (updateInterval) {
+      clearInterval(updateInterval);
+      updateInterval = null;
+    }
+    
     await LocalNotifications.cancel({
       notifications: [{ id: ONGOING_NOTIFICATION_ID }]
     });
@@ -62,9 +90,11 @@ export const updateOngoingNotification = async (prayerTimes) => {
   await showOngoingNotification(prayerTimes);
 };
 
-function getNextPrayer(timings) {
+function getNextPrayerWithCountdown(timings) {
   const now = new Date();
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const currentHours = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const currentTotalMinutes = currentHours * 60 + currentMinutes;
   
   const prayers = [
     { name: 'İmsak', time: timings.Fajr || timings.Imsak },
@@ -75,29 +105,23 @@ function getNextPrayer(timings) {
     { name: 'Yatsı', time: timings.Isha }
   ];
   
-  for (const prayer of prayers) {
-    if (currentTime < prayer.time) {
-      const remaining = calculateRemaining(currentTime, prayer.time);
-      return { ...prayer, remaining };
+  for (let i = 0; i < prayers.length; i++) {
+    const [prayerHours, prayerMinutes] = prayers[i].time.split(':').map(Number);
+    const prayerTotalMinutes = prayerHours * 60 + prayerMinutes;
+    
+    if (currentTotalMinutes < prayerTotalMinutes) {
+      const diffMinutes = prayerTotalMinutes - currentTotalMinutes;
+      const remainingHours = Math.floor(diffMinutes / 60);
+      const remainingMinutes = diffMinutes % 60;
+      
+      const remaining = remainingHours > 0 
+        ? `${remainingHours}s ${remainingMinutes}dk kaldı`
+        : `${remainingMinutes}dk kaldı`;
+      
+      return { current: prayers[i], remaining };
     }
   }
   
-  const remaining = calculateRemaining(currentTime, prayers[0].time, true);
-  return { ...prayers[0], remaining };
+  return { current: prayers[0], remaining: 'Yarın' };
 }
 
-function calculateRemaining(current, target, tomorrow = false) {
-  const [ch, cm] = current.split(':').map(Number);
-  const [th, tm] = target.split(':').map(Number);
-  
-  let diffMinutes = (th * 60 + tm) - (ch * 60 + cm);
-  if (tomorrow || diffMinutes < 0) diffMinutes += 24 * 60;
-  
-  const hours = Math.floor(diffMinutes / 60);
-  const minutes = diffMinutes % 60;
-  
-  if (hours > 0) {
-    return `${hours} saat ${minutes} dakika`;
-  }
-  return `${minutes} dakika`;
-}

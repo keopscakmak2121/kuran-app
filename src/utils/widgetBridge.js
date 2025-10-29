@@ -1,21 +1,22 @@
 // src/utils/widgetBridge.js
+import { registerPlugin } from '@capacitor/core';
+
+const PrayerWidgetPlugin = registerPlugin('PrayerWidgetPlugin');
 
 export const updatePrayerWidget = async (prayerTimes) => {
   try {
-    // Android WebView'den direkt Java metodunu çağır
-    if (window.Android && window.Android.updateWidget) {
-      window.Android.updateWidget(
-        prayerTimes.Imsak || prayerTimes.Fajr,
-        prayerTimes.Sunrise,
-        prayerTimes.Dhuhr,
-        prayerTimes.Asr,
-        prayerTimes.Maghrib,
-        prayerTimes.Isha
-      );
-      console.log('✅ Widget güncellendi (Direct call)');
-    } else {
-      console.log('⚠️ Android bridge bulunamadı');
-    }
+    console.log('📱 Widget güncellemesi başlıyor:', prayerTimes);
+    
+    await PrayerWidgetPlugin.updateWidget({
+      imsak: prayerTimes.Imsak || prayerTimes.Fajr,
+      gunes: prayerTimes.Sunrise,
+      ogle: prayerTimes.Dhuhr,
+      ikindi: prayerTimes.Asr,
+      aksam: prayerTimes.Maghrib,
+      yatsi: prayerTimes.Isha
+    });
+    
+    console.log('✅ Widget güncellendi');
   } catch (error) {
     console.error('❌ Widget güncelleme hatası:', error);
   }

@@ -38,7 +38,10 @@ const App = () => {
   const [scrollToAyah, setScrollToAyah] = useState(null);
   const [currentView, setCurrentView] = useState('home');
   const [previousView, setPreviousView] = useState('home');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+  const settings = JSON.parse(localStorage.getItem('quran_settings') || '{}');
+  return settings.darkMode || false;
+});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [downloadedSurahs, setDownloadedSurahs] = useState({});
@@ -54,7 +57,15 @@ const App = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchType, setSearchType] = useState('turkish');
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const toggleDarkMode = () => {
+  const newDarkMode = !darkMode;
+  setDarkMode(newDarkMode);
+  
+  // localStorage'a kaydet
+  const settings = JSON.parse(localStorage.getItem('quran_settings') || '{}');
+  settings.darkMode = newDarkMode;
+  localStorage.setItem('quran_settings', JSON.stringify(settings));
+};
 
   const bg = darkMode ? '#1f2937' : '#f0fdf4';
   const cardBg = darkMode ? '#374151' : 'white';
@@ -207,6 +218,7 @@ const App = () => {
       
       const extra = data.notification?.extra || data.extra;
       const notificationId = data.notification?.id || data.id;
+      const actionType = data.actionId; // Gerçek tıklama mı?
       
       if (extra && extra.action === 'SHOW_FULLSCREEN') {
         console.log('📱 Tam ekran gösteriliyor:', extra);
@@ -220,7 +232,8 @@ const App = () => {
         
         setShowFullScreenNotification(true);
       }
-    };
+      
+     };
 
     setupNotificationListeners();
 
@@ -230,6 +243,48 @@ const App = () => {
       }
       if (receiveListener && typeof receiveListener.remove === 'function') {
         receiveListener.remove();
+      }
+    };
+  }, []);
+
+  // ✅ KALICI BİLDİRİMİ UYGULAMA AÇILINCA YENİDEN GÖSTER
+  useEffect(() => {
+    let appListener;
+    
+    const setupAppListener = async () => {
+      appListener = await CapacitorApp.addListener('appStateChange', async ({ isActive }) => {
+        console.log('📱 App state changed:', isActive);
+        
+        if (isActive) {
+          console.log('📱 Uygulama aktif, kalıcı bildirim kontrol ediliyor...');
+          
+          const { getNotificationSettings } = await import('./utils/notificationStorage');
+          const settings = getNotificationSettings();
+          
+          console.log('📱 Kalıcı bildirim ayarı:', settings.persistentNotification);
+          
+          if (settings.persistentNotification) {
+            try {
+              const coords = await getUserLocation();
+              const result = await getPrayerTimesByCoordinates(coords.latitude, coords.longitude);
+              if (result.success) {
+                const { showOngoingNotification } = await import('./utils/ongoingNotification');
+                await showOngoingNotification(result.timings);
+                console.log('✅ Kalıcı bildirim yeniden gösterildi');
+              }
+            } catch (error) {
+              console.error('❌ Kalıcı bildirim gösterme hatası:', error);
+            }
+          }
+        }
+      });
+    };
+    
+    setupAppListener();
+
+    return () => {
+      if (appListener && typeof appListener.remove === 'function') {
+        appListener.remove();
       }
     };
   }, []);

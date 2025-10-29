@@ -1,0 +1,25 @@
+[33m991cceb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{0}: reset: moving to 991cceb
+[33ma8ef02e[m HEAD@{1}: reset: moving to a8ef02e
+[33ma8ef02e[m HEAD@{2}: reset: moving to a8ef02e
+[33mdcd7965[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{3}: commit: Add gitnot
+[33m991cceb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m HEAD@{4}: commit: Fix ongoing notification with native Android service
+[33m36759cf[m HEAD@{5}: pull origin main: Fast-forward
+[33me4263f6[m HEAD@{6}: Branch: renamed refs/heads/main to refs/heads/main
+[33me4263f6[m HEAD@{8}: commit: ChatGPT'den eklenen veya güncellenen dosyalar
+[33m2e6efb0[m HEAD@{9}: commit: Complete WidgetBridgePlugin class
+[33m5a4c867[m HEAD@{10}: Branch: renamed refs/heads/main to refs/heads/main
+[33m5a4c867[m HEAD@{12}: Branch: renamed refs/heads/main to refs/heads/main
+[33m5a4c867[m HEAD@{14}: commit: ChatGPT'den eklenen veya güncellenen dosyalar
+[33ma8ef02e[m HEAD@{15}: commit: Fix widget cache and ongoing notification
+[33m1a623f3[m HEAD@{16}: commit: Restore PrayerTimes.js
+[33m3a1fce7[m HEAD@{17}: reset: moving to HEAD
+[33m3a1fce7[m HEAD@{18}: Branch: renamed refs/heads/main to refs/heads/main
+[33m3a1fce7[m HEAD@{20}: commit: ChatGPT'den eklenen veya güncellenen dosyalar
+[33md1af092[m HEAD@{21}: Branch: renamed refs/heads/main to refs/heads/main
+[33md1af092[m HEAD@{23}: commit: ChatGPT'den eklenen veya güncellenen dosyalar
+[33mc4891b3[m HEAD@{24}: Branch: renamed refs/heads/main to refs/heads/main
+[33mc4891b3[m HEAD@{26}: commit: ChatGPT'den eklenen veya güncellenen dosyalar
+[33ma07e4c8[m HEAD@{27}: commit: Kalıcı bildirim özelliği ve arama state düzeltmesi
+[33ma6e4c06[m HEAD@{28}: commit: Bildirim sistemi ve navigasyon düzeltmeleri
+[33m1c59c18[m HEAD@{29}: commit: feat: Okunan ayet için ok işareti stili (arrow indicator) eklendi
+[33m1981a1a[m HEAD@{30}: clone: from https://github.com/keopscakmak2121/kuran-app.git

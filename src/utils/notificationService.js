@@ -298,6 +298,7 @@ export const sendTestNotification = async () => {
 
     const settings = getNotificationSettings();
     console.log('⚙️ Ayarlar:', settings);
+	console.log('🔊 Seçili ezan:', settings.selectedAdhan);
 
     // 📊 Ses dosyasını belirle
     const soundFile = getNativeSound(settings);
