@@ -1,4 +1,7 @@
 // src/utils/ongoingNotification.js
+// TÜM KOD KAPATILDI. Artık JS tarafı bildirim üretmez.
+
+/*
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const ONGOING_NOTIFICATION_ID = 999999;
@@ -124,4 +127,4 @@ function getNextPrayerWithCountdown(timings) {
   
   return { current: prayers[0], remaining: 'Yarın' };
 }
-
+*/

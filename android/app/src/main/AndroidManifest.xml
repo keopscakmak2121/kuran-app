@@ -24,7 +24,6 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
 
         <provider
@@ -37,14 +36,12 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- ✅ BİLDİRİM RECEIVER EKLENDİ -->
         <receiver 
             android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationReceiver"
             android:exported="false"
             android:enabled="true">
         </receiver>
 
-        <!-- ✅ BOOT RECEIVER (Telefon yeniden başladığında bildirimleri yenile) -->
         <receiver 
             android:name="com.capacitorjs.plugins.localnotifications.BootReceiver"
             android:exported="true"
@@ -54,7 +51,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ PRAYER TIME WIDGETS - 3 AYRI RECEIVER -->
         <receiver android:name=".SmallWidgetProvider"
             android:exported="true">
             <intent-filter>
@@ -85,6 +81,9 @@
                 android:resource="@xml/widget_large_info" />
         </receiver>
 
+        <service
+            android:name=".OngoingNotificationService"
+            android:exported="false" />
     </application>
 
     <!-- Permissions -->
@@ -97,5 +96,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
 </manifest>
